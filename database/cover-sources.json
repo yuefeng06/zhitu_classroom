@@ -1,0 +1,274 @@
+[
+  {
+    "id": 9,
+    "title": "武忠祥 · 高等数学",
+    "source": "https://unsplash.com/photos/mathematics-computation-05A-kdOH6Hw",
+    "image": "https://images.unsplash.com/photo-1509228468518-180dd4864904?fm=jpg&w=1000&h=650&fit=crop&q=85",
+    "credit": "Antoine Dautry / Unsplash",
+    "bytes": 57865
+  },
+  {
+    "id": 10,
+    "title": "吴恩达 · AI 初学者 Python 入门",
+    "source": "https://www.bilibili.com/video/BV1Ydv8BFEer/",
+    "image": "https://i2.hdslb.com/bfs/archive/7cd7c1532db61d66faccfc8ce1fb6ce47c00fc27.jpg@640w_360h_1c.jpg",
+    "credit": "小微带你学AI",
+    "bytes": 31577
+  },
+  {
+    "id": 11,
+    "title": "徐涛 · 考研政治零基础经典课",
+    "source": "https://www.bilibili.com/video/BV15ocBzQEJJ/",
+    "image": "https://i0.hdslb.com/bfs/archive/5bf16824f5edce405c6f2d733ca22b0aaab7ddc9.jpg@640w_360h_1c.jpg",
+    "credit": "研途考研教育",
+    "bytes": 33542
+  },
+  {
+    "id": 12,
+    "title": "2027 考研英语 · 三合一阅读技巧",
+    "source": "https://www.bilibili.com/video/BV1VD5x6NE7a/",
+    "image": "https://i1.hdslb.com/bfs/archive/6cc997f578d75796586291ace0f84a25fdb1d3ea.jpg@640w_360h_1c.jpg",
+    "credit": "上岸诗兄",
+    "bytes": 25367
+  },
+  {
+    "id": 13,
+    "title": "花生十三 · 逻辑判断 600 题精讲（第1套）",
+    "source": "https://www.bilibili.com/video/BV1TFdFBUE9r/",
+    "image": "https://i2.hdslb.com/bfs/archive/5f13f9893fbe6b1345790249d8b1dd0e81722fcb.jpg@640w_360h_1c.jpg",
+    "credit": "花生十三-公考行测",
+    "bytes": 49420
+  },
+  {
+    "id": 14,
+    "title": "翁恺 · C++ 面向对象程序设计",
+    "source": "https://www.bilibili.com/video/BV16P4y1o7No/",
+    "image": "https://i1.hdslb.com/bfs/archive/395b6611dbffc5d76a710c73a63d7aac43634086.png@640w_360h_1c.jpg",
+    "credit": "校园知识分享官小希",
+    "bytes": 27995
+  },
+  {
+    "id": 15,
+    "title": "高中语文 · 大题答题模板",
+    "source": "https://www.bilibili.com/video/BV1oh4y1s7Lb/",
+    "image": "https://i0.hdslb.com/bfs/archive/1fb2aa2bcc766112dc09f7f93a755a4fa971e530.jpg@640w_360h_1c.jpg",
+    "credit": "学过石油的语文老师",
+    "bytes": 36383
+  },
+  {
+    "id": 16,
+    "title": "高中数学 · 基础与解法全集",
+    "source": "https://www.bilibili.com/video/BV147411K7xu/",
+    "image": "https://i0.hdslb.com/bfs/archive/8c963f3eef8a75aef37807da987b2b6805863821.jpg@640w_360h_1c.jpg",
+    "credit": "一数",
+    "bytes": 24391
+  },
+  {
+    "id": 17,
+    "title": "高中物理一轮复习 · 运动学",
+    "source": "https://www.bilibili.com/video/BV1D54y1m7Av/",
+    "image": "https://i1.hdslb.com/bfs/archive/9c7184f217b779f9cb738baf1cc61c018eff5942.jpg@640w_360h_1c.jpg",
+    "credit": "HuangFuRen",
+    "bytes": 36655
+  },
+  {
+    "id": 18,
+    "title": "高中物理一轮复习 · 电场",
+    "source": "https://www.bilibili.com/video/BV1A5411E7Q1/",
+    "image": "https://i2.hdslb.com/bfs/archive/7e8c6708280780370a8667b5e1dd581c7adcd26c.jpg@640w_360h_1c.jpg",
+    "credit": "HuangFuRen",
+    "bytes": 40721
+  },
+  {
+    "id": 19,
+    "title": "高中物理一轮复习 · 磁场圆周",
+    "source": "https://www.bilibili.com/video/BV1Xb4y1Q7Eq/",
+    "image": "https://i0.hdslb.com/bfs/archive/f25e63d1ef48a28f1196c5d1dd6536bff36cb427.jpg@640w_360h_1c.jpg",
+    "credit": "HuangFuRen",
+    "bytes": 41612
+  },
+  {
+    "id": 20,
+    "title": "高中化学 · 基础与解法全集",
+    "source": "https://www.bilibili.com/video/BV1Qi4y1R7tW/",
+    "image": "https://i0.hdslb.com/bfs/archive/28a4a25c8d4452c7ca03a4270e016a369c097c91.png@640w_360h_1c.jpg",
+    "credit": "一化儿",
+    "bytes": 33097
+  },
+  {
+    "id": 21,
+    "title": "高中地理 300 讲（上）",
+    "source": "https://www.bilibili.com/video/BV1kr4y1v7uf/",
+    "image": "https://i0.hdslb.com/bfs/archive/d2ef2052d88864e67ced59d4a2e0b3cae0781d75.jpg@640w_360h_1c.jpg",
+    "credit": "一点老师",
+    "bytes": 21428
+  },
+  {
+    "id": 22,
+    "title": "高中生物 · 基础与解法全集",
+    "source": "https://www.bilibili.com/video/BV1YC4y1o7E3/",
+    "image": "https://i1.hdslb.com/bfs/archive/7ef2675975dca153f7e8a3a3a179bca66277429e.jpg@640w_360h_1c.jpg",
+    "credit": "一生儿",
+    "bytes": 29824
+  },
+  {
+    "id": 23,
+    "title": "王道计算机考研 · 数据结构",
+    "source": "https://www.bilibili.com/video/BV1b7411N798/",
+    "image": "https://i0.hdslb.com/bfs/archive/c5e46f7c2aeac9860bb99a0ed4d9607a0039bea9.jpg@640w_360h_1c.jpg",
+    "credit": "王道计算机教育",
+    "bytes": 34900
+  },
+  {
+    "id": 24,
+    "title": "王道计算机考研 · 操作系统",
+    "source": "https://www.bilibili.com/video/BV1YE411D7nH/",
+    "image": "https://i2.hdslb.com/bfs/archive/b6eabd5c6d6041a2c6274110880373bb8327ce5c.jpg@640w_360h_1c.jpg",
+    "credit": "王道计算机教育",
+    "bytes": 34615
+  },
+  {
+    "id": 25,
+    "title": "王道计算机考研 · 计算机组成原理",
+    "source": "https://www.bilibili.com/video/BV1ps4y1d73V/",
+    "image": "https://i0.hdslb.com/bfs/archive/6c8b11c80e44f2880356d9137f84c844bbbbe323.jpg@640w_360h_1c.jpg",
+    "credit": "王道计算机教育",
+    "bytes": 34617
+  },
+  {
+    "id": 26,
+    "title": "王道计算机考研 · 计算机网络",
+    "source": "https://www.bilibili.com/video/BV19E411D78Q/",
+    "image": "https://i2.hdslb.com/bfs/archive/fb3d3f987949aecc3a77a991f55ac3fa49a17e26.jpg@640w_360h_1c.jpg",
+    "credit": "王道计算机教育",
+    "bytes": 33364
+  },
+  {
+    "id": 27,
+    "title": "考研线性代数 · 复习课程",
+    "source": "https://www.bilibili.com/video/BV13NCrBVEN3/",
+    "image": "https://i1.hdslb.com/bfs/archive/775cb125d635ea05ad1d061821f4f61ef7d8ab2c.jpg@640w_360h_1c.jpg",
+    "credit": "线代铜",
+    "bytes": 22663
+  },
+  {
+    "id": 28,
+    "title": "花生老师 · 言语理解知识点速通",
+    "source": "https://www.bilibili.com/video/BV16NhA6sE7J/",
+    "image": "https://i0.hdslb.com/bfs/archive/94c3eb36217cdcd71de0a08c5f93b6f4643afd78.jpg@640w_360h_1c.jpg",
+    "credit": "南瓜不会数资",
+    "bytes": 22647
+  },
+  {
+    "id": 29,
+    "title": "MIT · 线性代数公开课",
+    "source": "https://www.bilibili.com/video/BV1rH4y1N7BW/",
+    "image": "https://i0.hdslb.com/bfs/archive/504b75e9905e22c8c5be2d8f60d259dbd51bf298.jpg@640w_360h_1c.jpg",
+    "credit": "Python学习课堂",
+    "bytes": 57707
+  },
+  {
+    "id": 30,
+    "title": "Harvard CS50 · SQL 数据库入门",
+    "source": "https://www.bilibili.com/video/BV1EK411x7TP/",
+    "image": "https://i1.hdslb.com/bfs/archive/c26023c54f0fc9a8ee148de3fdd18e82746a7840.jpg@640w_360h_1c.jpg",
+    "credit": "GPT中英字幕课程资源",
+    "bytes": 27614
+  },
+  {
+    "id": 31,
+    "title": "The Cherno · C++ 系列教程",
+    "source": "https://www.bilibili.com/video/BV1qh411p7Sa/",
+    "image": "https://i2.hdslb.com/bfs/archive/1baa6adea21bf344568a5afbf150d1b732178438.jpg@640w_360h_1c.jpg",
+    "credit": "于道各努力",
+    "bytes": 21424
+  },
+  {
+    "id": 32,
+    "title": "MIT Missing Semester · Shell 与课程概览",
+    "source": "https://www.bilibili.com/video/BV1Eo4y1d7KZ/",
+    "image": "https://i2.hdslb.com/bfs/archive/fa2655c8d6abc5f71ddac7b480c8685ca7a8fc68.jpg@640w_360h_1c.jpg",
+    "credit": "Missing_Semi_中译组",
+    "bytes": 17133
+  },
+  {
+    "id": 33,
+    "title": "UC Berkeley CS186 · 数据库系统导论",
+    "source": "https://www.bilibili.com/video/BV13a411c7Qo/",
+    "image": "https://i2.hdslb.com/bfs/archive/5731ec6f7e3f7f66ed603105bd79e37a0bfccbb5.jpg@640w_360h_1c.jpg",
+    "credit": "___main___",
+    "bytes": 18970
+  },
+  {
+    "id": 34,
+    "title": "李宏毅 · 机器学习与深度学习",
+    "source": "https://www.bilibili.com/video/BV1SMe36KEC2/",
+    "image": "https://i0.hdslb.com/bfs/archive/231d5e92a5a0034ab0c7c624a2bd5d8e98a339f6.jpg@640w_360h_1c.jpg",
+    "credit": "李宏毅DeepLearing",
+    "bytes": 53479
+  },
+  {
+    "id": 35,
+    "title": "尚学堂马士兵 · Java 系列教程",
+    "source": "https://www.bilibili.com/video/BV1Yt41197sM/",
+    "image": "https://i0.hdslb.com/bfs/archive/9076ef9e9950c9d2175323953b3ab7eaaa423466.jpg@640w_360h_1c.jpg",
+    "credit": "饮酒采桑津",
+    "bytes": 24929
+  },
+  {
+    "id": 36,
+    "title": "哈尔滨工业大学 · 操作系统",
+    "source": "https://www.bilibili.com/video/BV19r4y1b7Aw/",
+    "image": "https://i0.hdslb.com/bfs/archive/59cb7707ffe4110262e0619500eb07628dea7487.png@640w_360h_1c.jpg",
+    "credit": "农夫CC",
+    "bytes": 38859
+  },
+  {
+    "id": 37,
+    "title": "考研电路 · 电路原理零基础精讲",
+    "source": "https://www.bilibili.com/video/BV1uW4y1v7xr/",
+    "image": "https://i1.hdslb.com/bfs/archive/b667a3c8a005518d2b148aff25a19365abd256e4.jpg@640w_360h_1c.jpg",
+    "credit": "水木珞研电气考研",
+    "bytes": 47528
+  },
+  {
+    "id": 38,
+    "title": "公务员行测 · 数量关系系统课",
+    "source": "https://www.bilibili.com/video/BV19N411U7Pc/",
+    "image": "https://i0.hdslb.com/bfs/archive/c326ce987be29ff6d393d685ec139b0adb1e45ea.jpg@640w_360h_1c.jpg",
+    "credit": "刷题男孩毛娃儿",
+    "bytes": 34189
+  },
+  {
+    "id": 39,
+    "title": "2026 考研数学一真题 · 李烈逐题讲解",
+    "source": "https://www.bilibili.com/video/BV1AuoMBBE2p/",
+    "image": "https://i2.hdslb.com/bfs/archive/88c61717dbbc64164d94ce59c5d13507819f9124.jpg@640w_360h_1c.jpg",
+    "credit": "考研数学李烈老师",
+    "bytes": 32786
+  },
+  {
+    "id": 40,
+    "title": "2025 考研数学一真题 · 李烈逐题讲解",
+    "source": "https://www.bilibili.com/video/BV1a96DYgEYZ/",
+    "image": "https://i2.hdslb.com/bfs/archive/02096c805a40c5ae90ef5264b6c01bcbe51d7ebe.jpg@640w_360h_1c.jpg",
+    "credit": "考研数学李烈老师",
+    "bytes": 29335
+  },
+  {
+    "id": 41,
+    "title": "27 考研数学一 · 真题分类逐题讲解",
+    "source": "https://www.bilibili.com/video/BV1KXeu6tEUy/",
+    "image": "https://i2.hdslb.com/bfs/archive/cdfb98f311bbd59cb65729d31cf3f7d7faccdf48.jpg@640w_360h_1c.jpg",
+    "credit": "考研数学郭伟",
+    "bytes": 33341
+  },
+  {
+    "id": 42,
+    "title": "概率救命 · 概率知识串讲",
+    "source": "https://www.bilibili.com/video/BV1zH4y117JX/",
+    "image": "https://i1.hdslb.com/bfs/archive/effc2491d2686d82b26cca544a69ada71816e627.jpg@640w_360h_1c.jpg",
+    "credit": "没咋了",
+    "bytes": 21164
+  }
+]

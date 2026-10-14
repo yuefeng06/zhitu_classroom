@@ -1,0 +1,162 @@
+// Import the supplied Markdown as a static, escaped reading document. No runtime Markdown dependency.
+import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+const root = new URL('../', import.meta.url);
+const source = readFileSync(new URL('articles/README-zh_CN.md', root));
+const escape = (s) =>
+  s.replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+  );
+const base = 'https://github.com/ryanhanwu/How-To-Ask-Questions-The-Smart-Way/blob/master/';
+function href(value) {
+  if (value.startsWith('#')) return '#smart-' + value.slice(1).toLowerCase();
+  try {
+    const url = new URL(value, base);
+    return ['http:', 'https:', 'mailto:'].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+function inline(value) {
+  const tokens = [];
+  const save = (html) => '\u0000' + (tokens.push(html) - 1) + '\u0000';
+  value = value.replace(/(`+)([^`]+)\1/g, (_, ticks, code) =>
+    save('<code>' + escape(code) + '</code>'),
+  );
+  value = value.replace(/<a\s+id="([\w-]+)"><\/a>/g, (_, id) =>
+    save('<span id="smart-' + id + '"></span>'),
+  );
+  // A remote badge becomes a text link; the article stays readable without external images.
+  value = value.replace(
+    /\[!\[([^\]]*)\]\([^\n]+?\)\]\(([^\s]+)\)/g,
+    (_, label, url) => '[' + label + '](' + url + ')',
+  );
+  value = value.replace(/\[([^\]]+)\]\(([^\s]+)\)/g, (_, label, url) => {
+    const target = href(url);
+    return save(
+      target
+        ? '<a href="' +
+            escape(target) +
+            '"' +
+            (target.startsWith('#') ? '' : ' target="_blank" rel="noopener noreferrer"') +
+            '>' +
+            escape(label) +
+            '</a>'
+        : escape(label),
+    );
+  });
+  value = escape(value)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  // Nested labels may contain previously tokenized inline code.
+  while (/\u0000\d+\u0000/.test(value))
+    value = value.replace(/\u0000(\d+)\u0000/g, (_, i) => tokens[Number(i)] ?? '');
+  return value;
+}
+const headings = [];
+function blocks(lines) {
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.trim()) {
+      i++;
+      continue;
+    }
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      const label = heading[2].replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[`*]/g, '');
+      const id =
+        'smart-' +
+        label
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N}\s_-]/gu, '')
+          .replace(/\s/g, '-');
+      headings.push({ level: heading[1].length, label, id });
+      out.push(
+        '<h' +
+          heading[1].length +
+          ' id="' +
+          escape(id) +
+          '" tabindex="-1">' +
+          inline(heading[2]) +
+          '</h' +
+          heading[1].length +
+          '>',
+      );
+      i++;
+      continue;
+    }
+    if (/^\s*>/.test(line)) {
+      const quote = [];
+      while (i < lines.length && /^\s*>/.test(lines[i]))
+        quote.push(lines[i++].replace(/^\s*>\s?/, ''));
+      out.push('<blockquote>' + blocks(quote) + '</blockquote>');
+      continue;
+    }
+    if (/^\s*[*+-] /.test(line)) {
+      const list = [];
+      const indent = line.match(/^\s*/)[0].length;
+      while (i < lines.length) {
+        const item = lines[i].match(/^(\s*)[*+-] (.*)$/);
+        if (!item || item[1].length < indent) break;
+        if (item[1].length === indent) {
+          list.push('<li>' + inline(item[2]) + '</li>');
+          i++;
+        } else {
+          const nested = [];
+          while (i < lines.length && lines[i].match(/^\s*/)[0].length > indent && lines[i].trim())
+            nested.push(lines[i++]);
+          list[list.length - 1] = list.at(-1).replace(/<\/li>$/, '') + blocks(nested) + '</li>';
+        }
+      }
+      out.push('<ul>' + list.join('') + '</ul>');
+      continue;
+    }
+    if (/^\s*([-*_])(?:\s*\1){2,}\s*$/.test(line)) {
+      out.push('<hr>');
+      i++;
+      continue;
+    }
+    const paragraph = [];
+    while (
+      i < lines.length &&
+      lines[i].trim() &&
+      (paragraph.length === 0 || !/^(#{1,6}\s|\s*>|\s*[*+-] )/.test(lines[i]))
+    )
+      paragraph.push(lines[i++]);
+    out.push('<p>' + inline(paragraph.join('\n')) + '</p>');
+  }
+  return out.join('\n');
+}
+const html = blocks(source.toString('utf8').replace(/\r/g, '').split('\n'));
+const ids = new Set([...html.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]));
+for (const [, id] of html.matchAll(/href="#([^"]+)"/g))
+  if (!ids.has(id)) throw new Error('Missing article anchor: ' + id);
+const data = {
+  sha256: createHash('sha256').update(source).digest('hex'),
+  html,
+  contents: headings.filter((h) => h.level === 2),
+};
+const target = new URL('study-posts.js', root),
+  code = readFileSync(target, 'utf8');
+const generated =
+  '// BEGIN SMART QUESTIONS — generated by scripts/import-smart-questions.mjs\nconst smartQuestions=' +
+  JSON.stringify(data) +
+  ';\n// END SMART QUESTIONS';
+writeFileSync(
+  target,
+  code.includes('// BEGIN SMART QUESTIONS')
+    ? code.replace(/\/\/ BEGIN SMART QUESTIONS[\s\S]*?\/\/ END SMART QUESTIONS/, () => generated)
+    : code + '\n' + generated + '\n',
+);
+console.log(
+  'Imported complete article:',
+  source.length,
+  'bytes;',
+  headings.length,
+  'headings;',
+  ids.size,
+  'anchors.',
+);

@@ -1,0 +1,23 @@
+# Third-party code, private data and historical/generated artifacts.
+node_modules/
+.npm-cache/
+artifacts/
+data/
+database/backups/
+thesis/zhitu-classroom-source/
+thesis/evidence/
+docx-qa/
+articles/
+licenses/
+course-images/
+discovery-images/
+package-lock.json
+handwriting-data.js
+# The project formatter protects the generated article block in this module.
+study-posts.js
+database/
+*.md
+*.tex
+*.svg
+*.log
+.env*

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>知途课堂</title>
+    <link rel="icon" href="/logo-mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="studio.css" />
+    <link rel="stylesheet" href="theme.css" />
+    <meta name="theme-color" content="#f4f5f7" />
+  </head>
+  <body>
+    <div id="landscape-background" aria-hidden="true"><div class="landscape-image"></div></div>
+    <div id="page-progress" aria-hidden="true"></div>
+    <header>
+      <a class="logo" href="#/" aria-label="知途课堂首页"
+        ><img class="brand-logo" src="/logo.svg" alt="" width="174" height="51"
+      /></a>
+      <nav id="primary-nav" aria-label="主导航">
+        <a href="#/">首页</a><a href="#/courses">课程</a><a href="#/learning">学习</a
+        ><a href="#/explore">发现</a><a href="#/profile">我的</a>
+      </nav>
+      <form class="search" role="search" autocomplete="off">
+        <input id="search" type="search" maxlength="100" aria-label="搜索课程" /><button
+          id="search-submit"
+          type="submit"
+          aria-label="搜索"
+        >
+          ⌕</button
+        ><button id="search-clear" type="button" aria-label="清空搜索" hidden>×</button>
+      </form>
+      <div class="top-actions">
+        <button id="appearance-button" type="button" aria-label="界面设置" title="界面设置">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <ellipse cx="12" cy="12" rx="4" ry="9" />
+            <path d="M3 12h18M5 7h14M5 17h14" /></svg
+          ><span>中 / EN</span></button
+        ><button id="learning" title="我的学习">◷</button
+        ><button id="favorites" title="我的书架">☆</button><button id="create">学习空间</button
+        ><button id="auth-entry" type="button">登录 / 注册</button
+        ><button class="avatar" id="account">登</button>
+      </div>
+    </header>
+    <div id="page-navigation" class="page-navigation" hidden>
+      <button id="page-back" type="button">← 返回上一页</button
+      ><a id="page-parent" href="#/">返回首页</a>
+    </div>
+    <main id="app"></main>
+    <nav id="mobile-nav" aria-label="移动端主导航"></nav>
+    <dialog id="auth">
+      <button class="close">×</button>
+      <h2>登录知途课堂</h2>
+      <p>登录后同步学习进度、收藏和互动记录</p>
+      <input id="nickname" placeholder="昵称（演示账号：林同学）" /><input
+        id="password"
+        type="password"
+        placeholder="密码（演示密码：123456）"
+      /><button id="login" class="main-button">登录</button
+      ><button id="register" class="link-button">没有账号？立即注册</button>
+    </dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <button
+      id="back-to-top"
+      type="button"
+      aria-label="返回顶部"
+      aria-hidden="true"
+      tabindex="-1"
+      title="返回顶部"
+    >
+      ↑<small>顶部</small>
+    </button>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

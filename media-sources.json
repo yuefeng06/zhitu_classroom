@@ -1,0 +1,18 @@
+{
+  "default": {
+    "url": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    "label": "MDN 花朵短片 · CC0 公开演示素材（非课程教学内容）",
+    "sourcePage": "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/video",
+    "demo": true
+  },
+  "chapters": {
+    "9001": {
+      "kind": "bilibili",
+      "bvid": "BV15Ke46XEFG",
+      "page": 1,
+      "label": "武忠祥考研数学 · Bilibili 原站播放器",
+      "sourcePage": "https://www.bilibili.com/video/BV15Ke46XEFG/",
+      "demo": false
+    }
+  }
+}

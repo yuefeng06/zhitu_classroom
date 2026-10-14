@@ -1,0 +1,32 @@
+{
+  "name": "zhitu-classroom",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "format": "node scripts/format-code.mjs --write",
+    "format:check": "node scripts/format-code.mjs --check",
+    "format:powershell": "pwsh -NoProfile -File scripts/format-powershell.ps1",
+    "format:powershell:check": "pwsh -NoProfile -File scripts/format-powershell.ps1 -Check",
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs",
+    "test": "node --test tests/integration.test.mjs tests/recommendations.test.mjs tests/platform.test.mjs",
+    "recommend:train": "node scripts/train-recommendations.mjs",
+    "test:browser": "node --test tests/browser.test.mjs",
+    "db:migrate": "node scripts/migrate-mysql.mjs",
+    "db:check": "node scripts/check-mysql.mjs",
+    "test:mysql": "node --test tests/mysql.test.mjs",
+    "benchmark:summaries": "node scripts/benchmark-summaries.mjs",
+    "recommend:experiment": "node scripts/recommendation-experiment.mjs"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "mysql2": "^3.24.4"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2",
+    "sql-formatter": "15.9.0"
+  }
+}

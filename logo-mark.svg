@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>知途 · 按自己的节奏学习</title>
+  <desc>圆润的 Z 字路线与进度圆点，代表知途与按自己的节奏前行</desc>
+  <circle cx="12" cy="16" r="4.5" fill="#dd96af"/>
+  <path d="M25 16h18c5 0 7 4 2 8L19 43c-4 3-3 6 2 6h18" stroke="#cb416d" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="52" cy="49" r="4.5" fill="#dd96af"/>
+</svg>

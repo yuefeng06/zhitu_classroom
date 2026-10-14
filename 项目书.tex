@@ -1,0 +1,295 @@
+% !TEX program = xelatex
+\documentclass[UTF8,12pt,a4paper,openany,oneside]{ctexbook}
+\usepackage[margin=2.5cm,headheight=16pt]{geometry}
+\usepackage{booktabs,longtable,array,enumitem,xcolor,fancyhdr}
+\usepackage{hyperref}
+\definecolor{Brand}{HTML}{CB416D}
+\definecolor{Ink}{HTML}{252731}
+\hypersetup{colorlinks=true,linkcolor=Ink,urlcolor=Brand,pdftitle={知途课堂项目书},pdfauthor={知途课堂项目组},bookmarksnumbered=true}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.35em}
+\setlength{\emergencystretch}{2em}
+\setlist[itemize]{leftmargin=2em,itemsep=0.15em}
+\setlist[enumerate]{leftmargin=2em,itemsep=0.15em}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\project}{知途课堂}
+\newcommand{\revisiondate}{2026年10月8日}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small 知途课堂\quad 项目书}
+\fancyhead[R]{\small 阶段成果修订版}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+\begin{document}
+\begin{titlepage}
+\centering
+\vspace*{2.2cm}
+{\color{Brand}\large ZHITU CLASSROOM\par}
+\vspace{0.8cm}
+{\Huge\bfseries 知途课堂\par}
+\vspace{0.6cm}
+{\LARGE 在线学习网站项目书\par}
+\vspace{0.8cm}
+{\Large 按自己的节奏学习\par}
+\vspace{1.3cm}
+{\large 项目性质：响应式全栈在线学习网站\par}
+\vspace{0.3cm}
+{\large 文档版本：阶段成果修订版\par}
+\vspace{0.3cm}
+{\large 核对日期：\revisiondate\par}
+\vfill
+\begin{tabular}{rl}
+项目组：&\underline{\hspace{8cm}}\\[0.7cm]
+负责人：&\underline{\hspace{8cm}}\\[0.7cm]
+指导教师：&\underline{\hspace{8cm}}
+\end{tabular}
+\vspace{1.5cm}
+\end{titlepage}
+\frontmatter
+\chapter*{项目摘要}
+\addcontentsline{toc}{chapter}{项目摘要}
+\project 以“按自己的节奏学习”为主题，面向高中、考研、考公以及大学与技术课程学习者，将真实课程目录、分集导航、课程收藏、私有笔记、最近访问和每日手动打卡组织为连续的学习流程。用户既可以寻找下一门课程，也可以回到上次打开的章节，在个人中心整理学习记录。
+
+网站采用原生 HTML、CSS 和 JavaScript 模块构建响应式界面，Node.js 同源提供页面与业务 API，MySQL 保存账户及主要学习数据。截止\revisiondate，只读检查确认业务库包含 33 门上架课程、2,205 个分集，与本地课程快照一致，运行服务健康接口返回 MySQL。课程数量仅表示已接入目录规模，不等于全部第三方视频已逐一验证可播放。
+
+当前用户端具备主要学习功能；管理工作台已具备服务端管理员权限、课程与文章管理、讨论审核、普通账号状态维护和事务审计。网站已取消直播入口，历史直播表与兼容接口不属于当前交付页面。本文基于源码、结构快照与本轮只读检查更新建设范围、设计方案、验收方法和后续计划，明确区分已实现功能、保留兼容项和待建设能力。
+
+\tableofcontents
+\mainmatter
+
+\chapter{项目定位与建设目标}
+\section{建设背景}
+公开课程入口分散，学习者经常需要重新查找分集、翻找笔记、记住上次学习位置。跨学科和备考场景进一步增加了管理成本。本项目通过统一课程目录与个人学习空间，缩短从发现课程到继续学习的操作路径。
+
+网站不以播放量或排行榜督促学习，而是围绕自主选择、随时续学、记录思考和主动打卡组织功能。打卡表示当天主动留下学习印记，不宣称记录了真实学习时长或视频完成度。
+
+\section{建设目标}
+\begin{enumerate}
+\item 提供来源明确的课程目录，支持分类、学科、关键词和章节检索。
+\item 形成发现课程、选择分集、收藏与笔记、再次访问的主要用户流程。
+\item 以服务器会话和 MySQL 关联数据保护个人记录归属。
+\item 在桌面与手机上提供清晰导航、可用的返回路径及一致的阅读体验。
+\item 通过每日打卡、学习方法精选和全文阅读补充视频之外的学习支持。
+\item 建立内容增量维护、数据库备份和分层验证流程，避免把演示能力写成正式服务。
+\end{enumerate}
+
+\section{目标用户与交付形态}
+目标用户包括高中学科复习者、考研与考公备考者，以及学习编程、人工智能和大学基础课的用户。当前交付形态为可在本地浏览器运行的响应式网站，并非已上线的原生 APP 或小程序；移动端页面可用于课程展示与交互演示。
+
+\chapter{阶段成果与范围界定}
+\section{课程内容规模}
+下表来自\revisiondate 的本地公开元数据快照；同日 MySQL 只读检查确认上架课程总数与分集总数一致。具体课程是否可播放仍受原站状态影响。
+{\small
+\begin{longtable}{P{0.48\textwidth}P{0.18\textwidth}P{0.18\textwidth}}
+\toprule 学习方向 & 上架课程 & 分集数量 \\ \midrule
+高中课程 & 8 & 752 \\
+考研课程 & 12 & 639 \\
+考公课程 & 3 & 16 \\
+大学与技术公开课 & 10 & 798 \\
+\midrule 合计 & 33 & 2,205 \\
+\bottomrule
+\end{longtable}}
+原计算机课程和海外公开课已合并到“大学与技术公开课”。武忠祥高等数学旧课程已下架，常规列表和推荐不再展示；课程和章节历史关联保留，不删除用户既有学习数据。
+
+\section{功能状态}
+{\small
+\begin{longtable}{P{0.20\textwidth}P{0.19\textwidth}P{0.48\textwidth}}
+\toprule 模块 & 当前状态 & 实际能力与限制 \\ \midrule
+账户与头像 & 已实现 & 注册、登录、退出、会话恢复；头像裁剪、上传和恢复默认头像。 \\
+课程与播放 & 已实现 & 目录筛选、章节导航、原站嵌入；另支持配置原生视频直链。 \\
+学习数据 & 已实现 & 收藏、私有笔记、最近访问；原生播放器可保存章节位置。 \\
+每日打卡 & 已实现 & 服务器北京时间按日记录，近 365 天日历与统计。 \\
+学习经验 & 已实现 & 九篇短摘录及中文整理；《提问的智慧》独立全文入口。 \\
+个人工具 & 部分为本地状态 & 笔记导出、关注列表、界面偏好与专注计时；计时不计入课程时长。 \\
+管理工作台 & 业务实现 & 看板、用户状态、课程、文章、讨论审核及操作审计，写入 MySQL。 \\
+直播相关 & 历史兼容 & 页面入口与管理排期已取消，旧表及兼容接口保留。 \\
+\bottomrule
+\end{longtable}}
+管理端当前包含用户管理以及课程、讨论两类业务管理。若课程验收仍要求至少三类核心业务管理，该项尚有缺口，应另行建设内容或章节管理，不以已经取消的直播排期充数。
+
+\chapter{需求与用户流程}
+\section{页面组织}
+桌面导航包含首页、课程、学习、发现、我的；移动端为首页、发现、学习、我的四个底部入口，课程列表由首页和发现页等位置进入。模块页提供上一页或上级入口，避免进入详情后无法返回。
+
+\subsection{首页和课程中心}
+首页围绕逐字书写的主题文案、深蓝精选横幅、课程推荐和学习小贴士组织内容。课程中心展示真实封面，支持分类、学科、排序及卡片或清单视图。筛选信息通过路由参数表达，方便返回和再次访问。
+
+首页推荐已由固定目录顺序改为内容相似度排序，根据收藏、投币与最近访问构建兴趣向量，并提供简短推荐理由。另实现可离线训练的 BPR 矩阵分解及混合排序，仅在数据门槛与独立验证分区门控通过时加载私有模型；新用户、无效或过期模型回退内容或关注人数排序。2026年10月7日业务数据尚未达到训练门槛，因此当前使用内容推荐，不宣称机器学习效果已验证。推荐模块复用现有表，按全局唯一时间戳切分训练、验证及独立测试，对照热门、内容、纯 BPR 与混合。快照不是完整事件回放；本轮合成样本中混合未优于内容。训练参数及限制见项目 README。
+
+顶部搜索空闲时轮播真实课程名称，用户可以点击搜索图标直接打开当时显示的课程；输入关键词后显示课程建议，支持键盘选择。搜索历史按账户区分，保存在当前浏览器；清空按钮采用垃圾桶图标，并提供悬停说明和无障碍名称。课程页不再设置重复的大搜索框。
+
+\subsection{学习页与个人中心}
+学习页展示每日打卡、继续学习和书架。打卡日历以日期网格展示近一年记录，颜色仅区分是否打卡；同一用户在北京时间同一天只能产生一条记录，不接受客户端指定日期补签。
+
+完整历史记录位于个人中心，只显示最近访问的课程、章节与日期，不提供搜索或下拉筛选。每门课程只保留最近一次访问，不是逐次观看日志。使用可横向滚动的时间轴与 16:9 小封面，显示北京时间日期和时刻，支持触屏、方向按钮及键盘；清除图标需确认，保留收藏、笔记和播放进度。书架仍支持筛选与收藏操作。
+
+个人中心还提供私有笔记检索、按课程筛选、Markdown 导出、对应章节返回和关注列表。专注计时保存在当前标签页的会话存储，页面切换后可继续；其结果不写入课程播放统计。
+
+\subsection{发现页与文章阅读}
+发现页提供带真实图片的学习方向、入门课程建议、学习经验和学习指引。经验区直接展示全部九篇精选，不设置重复分类导航。精选包含简短英文原文、中文译文、本站方法归纳与来源外链。
+
+《提问的智慧》使用图书馆照片作为独立入口，在站内弹窗中提供完整中文文档、目录跳转、关闭返回与回到开头。保留原作者、译者和来源链接；正文不随界面语言切换而改写。此文由用户提供并明确要求全文移植，其他精选仍按短摘录方式呈现。
+
+\section{视频与互动流程}
+用户进入课程后选择分集，系统使用对应的 Bilibili 视频编号、分集编号和内容编号加载原站播放器。打开和切换章节可记录最近访问。本站无法读取跨域 Bilibili 播放器的实际秒数，因此不自动生成观看完成率。
+
+对于明确配置的原生视频直链，HTML5 播放器可根据播放事件保存章节位置。笔记与章节及时间点关联；写入前由后端校验章节确属当前课程。站内支持收藏、关注、评论、投币和弹幕等互动，但站内弹幕与评论不是对 Bilibili 原站互动的同步。
+
+\section{账号与可用性要求}
+公开课程可匿名浏览；涉及私人记录的接口要求有效登录会话。头像由前端裁剪，服务端校验 JPEG 格式和大小，使用随机文件名保存。导航、选择菜单及阅读入口兼顾键盘和触屏，动画遵循减少动态效果偏好。语言切换针对界面文本，不强行翻译课程名称、用户笔记和原文引用。
+
+\chapter{系统与数据设计}
+\section{总体架构}
+系统分为浏览器、Node.js 服务和 MySQL 三层。浏览器以原生 JavaScript ESM 组织页面；同源服务提供静态资源及 JSON API，避免另设跨域前端服务。视频内容由原站或配置的媒体地址提供，本站不抓取鉴权视频流，也不把普通视频网页当作 MP4。
+{\small
+\begin{longtable}{P{0.25\textwidth}P{0.61\textwidth}}
+\toprule 层次与模块 & 职责 \\ \midrule
+页面与视觉 & \path{app.js}、\path{home.js}、\path{studio.js} 与 CSS 负责路由、课程、发现和主题。 \\
+个人学习 & \path{profile.js}、\path{study-collection.js}、\path{checkin-calendar.js} 组织历史、笔记、书架和打卡。 \\
+交互与阅读 & \path{search.js}、\path{select-menu.js}、\path{experience.js}、\path{study-posts.js} 负责搜索、偏好和文章。 \\
+HTTP 与业务 & \path{server.mjs} 实施静态白名单及 API 分发；\path{backend.mjs} 校验身份和业务关系。 \\
+数据库访问 & \path{database.mjs} 提供异步查询与事务；\path{mysql-schema.mjs} 检查结构兼容性。 \\
+内容配置 & \path{catalog.mjs}、\path{database/video-catalog.json} 和 \path{media-sources.json} 维护课程与分集映射。 \\
+\bottomrule
+\end{longtable}}
+运行要求为 Node.js 22.13 或更新版本。业务库默认使用 MySQL；SQLite 只用于明确选择的隔离测试或历史迁移源，连接失败时不静默回退。
+
+\section{数据归属与持久化}
+{\small
+\begin{longtable}{P{0.23\textwidth}P{0.22\textwidth}P{0.42\textwidth}}
+\toprule 数据 & 存储位置 & 使用边界 \\ \midrule
+账户和会话 & MySQL & 服务端识别用户，密码以摘要保存。 \\
+收藏、笔记、访问、打卡 & MySQL & 按会话用户关联，私有数据需归属校验。 \\
+头像 & 数据库地址及文件目录 & 文件默认保存在 \path{data/avatars/}，备份应同时覆盖二者。 \\
+课程及精选文章 & 本地快照与静态文件 & 课程元数据增量同步；原有精选及全文为静态资源。 \\
+搜索历史、界面偏好 & 浏览器本地存储 & 不宣称跨设备同步；搜索历史按账户隔离。 \\
+专注计时 & 标签页会话存储 & 不等同于服务器学习时长。 \\
+管理数据和新增文章 & MySQL & 服务端权限、行版本与事务审计保护写入；发布后可公开阅读。 \\
+\bottomrule
+\end{longtable}}
+
+\section{数据库结构}
+依据 2026年10月7日更新的 MySQL 结构快照，当前记录 22 张基础表、102 个字段、30 个外键及 1 个视图。本轮增量添加五张管理表及昵称唯一索引，保留既有学习数据；已重新导出结构。详细字段、索引和外键以实际数据库及结构说明为准。
+{\small
+\begin{longtable}{P{0.20\textwidth}P{0.67\textwidth}}
+\toprule 数据分组 & 表与关系 \\ \midrule
+身份 & \path{users} 保存用户，\path{sessions} 保存登录会话。 \\
+课程内容 & \path{courses} 与 \path{chapters} 为一对多；上架依据 \path{published}。 \\
+学习记录 & \path{notes}、\path{course_visits}、\path{chapter_playback}、\path{progress} 分别记录笔记、最近访问、原生章节位置及课程进度。 \\
+互动关系 & \path{favorites}、\path{coins}、\path{follows}、\path{comments}、\path{danmaku} 保存收藏、投币、关注、评论和弹幕。 \\
+每日打卡 & \path{study_checkins} 以用户和日期为联合主键，关联用户表。 \\
+历史兼容 & \path{live_events} 与 \path{reservations} 保留历史直播及预约关系；当前页面不调用。 \\
+统计视图 & \path{v_course_comment_stats} 提供课程评论统计。 \\
+\bottomrule
+\end{longtable}}
+课程与章节之间的单列外键不能代替接口层“章节属于课程”的校验。当前 MySQL 用户昵称已有单列唯一索引；增量升级前已检查重复数据，并通过隔离同名并发注册验证。会话到期时间为 Unix 毫秒，播放与笔记位置以秒计，打卡日期由服务器按北京时间生成。
+
+\section{安全与内容维护}
+后端使用有界异步 scrypt 密码派生、参数绑定和会话归属校验；会话 Cookie 设置 HttpOnly 与 SameSite 属性。静态资源实行白名单，不开放项目目录任意下载。登录注册已有单进程地址限流，管理员由运维按指定账号授权；部署到公网前仍需评估 HTTPS、代理限流、监控和恢复流程，现有措施不能等同于正式安全审计通过。
+
+课程更新采用增量同步：先预检、备份目标课程及章节，再事务写入；明确下架只修改上架状态，保留历史关系。数据库结构变更单独制定增量迁移，不能因改页面或写文档执行全量历史迁移。MySQL 的 DDL 可能隐式提交，不能认为数据事务回滚会撤销建表和改表。
+
+\chapter{视觉与交互方案}
+\section{视觉语言}
+当前主题采用浅灰背景、白色卡片、粉色点缀与深蓝精选横幅；主要颜色为背景 \texttt{\#f4f5f7}、文字 \texttt{\#252731}、强调 \texttt{\#cb416d}。界面使用无衬线字体，避免过度加粗和大面积厚重色块。
+
+图形标志采用圆润的 Z 字路线与进度圆点，关联“知途”的首字母和自主学习节奏，不再使用书本元素。页头完整字标与浏览器图标共用同一图形。首页主题文案逐字呈现，配合滑块导航、柔和背景和适量滚动动效；用户偏好减少动态效果时采用相应降级。
+
+\section{布局与反馈}
+课程封面使用真实主题图片并保存来源信息；历史记录使用紧凑横向卡片，文章正文采用适合长文的行距和目录。下拉菜单统一为主题样式。表单提供处理状态及错误提示，空结果不填充虚构课程或统计。
+
+用户可以从搜索建议直达课程，从个人历史返回课程，从笔记进入对应章节，从全文阅读弹窗关闭回到发现页。交互优化围绕这些具体路径展开，不重复堆叠同类导航或筛选控件。
+
+\chapter{运行、维护与质量保障}
+\section{启动与环境}
+在 PowerShell 中进入项目目录，首次安装依赖后按下列顺序运行：
+\begin{verbatim}
+npm install
+npm run db:check
+npm start
+\end{verbatim}
+开发模式为 \texttt{npm run dev}，默认访问 \url{http://localhost:3000}。运行前应启动 MySQL 服务，并在项目 \path{.env} 中配置连接信息；环境变量优先于文件配置。公开文档不包含密码、连接密钥或用户业务数据。
+
+\section{维护方法}
+\begin{itemize}
+\item 更新课程：使用 \path{scripts/sync-mysql-catalog.mjs} 指定课程编号预检，再按授权应用增量更新；片源快照修改后重启网站服务加载映射。
+\item 新增打卡表：已有库使用 \path{scripts/add-study-checkins.mjs} 增量处理，不运行全量历史迁移。
+\item 管理升级：运行 \path{scripts/upgrade-platform.mjs} 预检及应用；管理员必须由用户明确指定，再通过 \path{scripts/grant-admin.mjs} 授权。
+\item 更新全文：编辑保留的 \path{articles/README-zh_CN.md} 后，运行 \path{scripts/import-smart-questions.mjs} 重新生成静态阅读内容。
+\item 备份：同时保存 MySQL 数据、头像目录和课程来源配置；原 SQLite 文件不代表最新业务状态。
+\item 协作：\path{AGENTS.md} 为统一规范，\path{agent.md} 只保留兼容入口。项目书随功能边界更新，不把规划写成已完成事项。
+\end{itemize}
+
+\section{分层验证}
+{\small
+\begin{longtable}{P{0.30\textwidth}P{0.56\textwidth}}
+\toprule 检查命令 & 可证明的范围 \\ \midrule
+\texttt{npm test} & 临时 SQLite 中的 API、身份认证、归属与持久化回归，不能证明 MySQL 兼容性。 \\
+\texttt{npm run test:mysql} & 独立临时 MySQL 实例中的结构升级、事务、迁移与接口；不使用业务库。 \\
+\texttt{npm run test:browser} & 无界面浏览器与临时库中的页面交互；启动失败或跳过不算通过。 \\
+\texttt{npm run db:check} & 配置指向的 MySQL 业务库可访问且预期结构齐全。 \\
+\path{/api/health} & 运行中的网站实际使用哪一种数据库。 \\
+\texttt{node --check} & JavaScript 语法正确，不替代页面视觉和交互检查。 \\
+\bottomrule
+\end{longtable}}
+
+\section{本轮核对记录}
+2026年10月7日执行的 \texttt{npm run db:check} 返回成功，MySQL 为 8.0.30，目标库为 \path{zhitu_classroom}，上架课程数为 33，分集汇总为 2,205。2026年10月8日运行服务 \path{/api/health} 返回 HTTP 200 且数据库为 MySQL；本地课程快照汇总与业务库总数一致。
+
+本轮接口与算法测试报告24项通过，独立MySQL回归13项通过，后台Edge专项1项通过；全量浏览器回归未重跑。业务库执行了经授权的增量结构升级及指定账号授权，未用于测试发布或停用。课程摘要基准使用连接私有临时表：33门课程的查询由132次降为4次，中位耗时28.576毫秒降至1.377毫秒；该单连接函数实验不是整站性能。业务推荐数据为3用户、15组交互，仍未启用模型。详细证据见论文目录。
+
+\section{建议验收场景}
+\begin{enumerate}
+\item 在桌面和手机宽度浏览首页、课程、发现、学习、个人中心，检查导航、返回路径和横向溢出。
+\item 验证轮播课程直达、关键词建议、键盘选择及搜索历史垃圾桶清空。
+\item 使用隔离测试账户注册、登录和更新头像，刷新后核对会话与头像持久化。
+\item 收藏课程、创建笔记并导出；使用另一账户核实不能读取或删除他人的私有笔记。
+\item 分别访问原站视频与可用直链，核对访问记录和实际播放位置的差别。
+\item 连续点击当日打卡，确认只产生一条记录；个人历史只显示每门课程最近一次访问。
+\item 打开九篇经验精选与《提问的智慧》全文，检查引用来源、目录跳转、关闭和焦点返回。
+\item 在隔离库验证管理员身份、课程编辑、文章草稿与发布、评论隐藏、普通账号停用及审计；普通账号应被拒绝，陈旧版本提交应返回冲突。
+\end{enumerate}
+
+\chapter{后续建设与风险控制}
+\section{建设优先级}
+{\small
+\begin{longtable}{P{0.12\textwidth}P{0.38\textwidth}P{0.37\textwidth}}
+\toprule 优先级 & 建设工作 & 完成判断 \\ \midrule
+高 & 管理故障恢复与权限复核 & 持续验证角色、事务审计、并发编辑与恢复演练。 \\
+高 & 真实请求负载评价 & 测量 HTTP 分位数、错误率与认证队列饱和情况。 \\
+高 & 恢复稳定的浏览器回归 & 核心路径在桌面和移动尺寸完成验证并保留结果。 \\
+中 & 课程失效检查与内容管理 & 可识别来源变化，人工复核后增量更新或下架。 \\
+中 & 推荐事件与曝光数据 & 明确告知后积累数据，建立完整事件回放和真实评价。 \\
+中 & 公网部署准备 & HTTPS、配置隔离、备份恢复、限流与监控有记录可查。 \\
+\bottomrule
+\end{longtable}}
+以上属于后续计划，没有预设虚构完成日期，也不计入当前交付能力。
+
+\section{主要风险}
+\begin{itemize}
+\item 第三方链接可能变更或下架。保留来源快照、明确跳转原站入口，定期核查，不承诺所有课程永久可播。
+\item 跨域播放器无法回传真实进度。仅记录打开章节，不用打卡或访问次数推算观看时长。
+\item 数据库变更可能影响已有用户。先备份并隔离验证，出现身份冲突时不强行合并。
+\item 本地状态容易被误认为跨设备同步。对偏好、搜索历史和专注计时明确标识存储边界。
+\item 文章引用与图片来源需要持续维护。保留出处，短摘录与用户提供的全文分别处理。
+\end{itemize}
+
+\chapter{阶段总结}
+\project 已从课程展示页面发展为包含真实内容、账户、个人记录、打卡和文章阅读的响应式学习网站。其价值在于帮助用户选到课程、找到章节、留下笔记并方便地再次进入学习状态。后续应优先完善正式管理权限、数据一致性与自动化验证，再推进部署和内容维护工具，使功能规模与可靠性同步增长。
+
+\appendix
+\chapter{交付文件与展示顺序}
+\section{文档入口}
+\begin{itemize}
+\item \path{README.md}：启动、功能与接口说明。
+\item \path{AGENTS.md}、\path{agent.md}：统一协作规范及兼容入口。
+\item \path{项目书.tex}：本项目书可编辑 LaTeX 源文件。
+\item \path{UI设计与展示说明.md}：页面和展示说明，细节以现有实现为准。
+\item \path{database/数据库表结构说明.md}：实际结构数据字典。
+\item \path{database/mysql-structure-snapshot.json}：结构元数据快照。
+\item \path{database/MySQL切换说明.md}：历史迁移、备份与回退边界。
+\end{itemize}
+
+\section{建议展示顺序}
+先展示首页主题与搜索，再打开真实课程分集，演示收藏及笔记；随后展示学习页打卡与个人历史，最后阅读发现页文章并展示受权限保护的管理流程。使用隔离演示账号，避免在投屏、截图或日志中暴露私人记录和数据库凭据。
+\end{document}

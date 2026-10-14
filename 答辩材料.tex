@@ -1,0 +1,76 @@
+\documentclass[UTF8,12pt,a4paper]{ctexart}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{longtable,booktabs,array,hyperref,xcolor}
+\hypersetup{colorlinks=true,linkcolor=black,urlcolor=teal}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.35em}
+\title{知途课堂全栈网课系统\\项目答辩材料}
+\author{项目组：\underline{\hspace{6cm}}\\答辩人：\underline{\hspace{6cm}}}
+\date{2026年9月}
+\begin{document}
+\maketitle
+\begin{abstract}
+知途课堂是一个面向多阶段学习者的响应式网课系统。项目以原生 HTML、CSS、JavaScript 构建用户界面，由 Node.js 同源提供静态页面和业务接口，以 MySQL 保存账户及学习数据。系统围绕“找到课程—打开章节—记录学习—再次返回”设计学习路径，支持课程检索、原站视频播放、收藏、最近访问、私有笔记、讨论及直播预约。本文介绍系统设计、实现、测试与当前边界。
+\end{abstract}
+\tableofcontents
+\newpage
+\section{选题背景与目标}
+公开课程分散于不同来源，学习者常需反复寻找课程和上次打开的章节。项目希望将真实课程目录、章节导航和个人学习记录放在统一入口中，并提供适合桌面及手机的阅读与操作体验。目标包括：建立可检索的课程目录；通过账户保存个人数据；支持不同视频来源；明确区分真实业务功能与界面演示原型。
+
+\section{需求与功能范围}
+\begin{longtable}{p{0.23\textwidth}p{0.69\textwidth}}
+\toprule 模块 & 已实现能力 \\ \midrule
+课程发现 & 首页精选、分类与学科筛选、关键词搜索、课程排序、课程详情和章节目录。 \\
+学习交互 & 最近访问、收藏书架、讲师关注、课程讨论、弹幕、私有时间点笔记。 \\
+视频播放 & Bilibili 原站嵌入及来源链接；对可访问的 MP4/WebM 直链提供原生播放器和章节进度保存。 \\
+账户与个人中心 & 注册登录、会话恢复、退出登录、学习概览、笔记检索与 Markdown 导出。 \\
+直播 & 读取已发布直播、登录用户预约；无真实排期时显示空状态。 \\
+界面 & 响应式导航、中英文界面文案切换、阅读字号设置和减少动态效果适配。 \\
+管理演示 & 看板、用户、课程、直播和讨论页面；编辑结果仅保存在浏览器本地。 \\
+\bottomrule
+\end{longtable}
+当前课程目录记录 28 门真实课程、约 1900 个原站分集，覆盖高中、考研、考公及大学与技术公开课。课程及分集以公开元数据快照为依据，数量会随目录更新而变化。
+
+\section{系统架构与技术选型}
+前端采用原生 ESM 模块组织页面与交互，无需额外构建工具。\texttt{server.mjs} 提供 HTTP 服务、静态资源白名单及 \texttt{/api} 路由；\texttt{backend.mjs} 实现身份认证、课程和学习业务；\texttt{database.mjs} 封装异步查询和事务。MySQL 为默认业务数据库，SQLite 仅用于显式指定的隔离测试或回退。运行环境要求 Node.js 22.13 及以上、MySQL 8.0 及以上。
+
+浏览器通过同源 API 获取课程和个人数据。服务端根据会话 Cookie 确定用户身份，写入时校验课程、章节与用户归属；课程目录与分集映射保存在项目快照中，视频资源由来源站或配置的直链提供。这个划分使界面与业务数据解耦，也避免将视频网页地址误当作媒体文件。
+
+\section{核心实现}
+\subsection{课程目录与学习路径}
+课程列表支持关键词、分类和学科组合筛选，筛选条件保留在地址中，便于刷新和分享。用户打开课程或切换章节时记录最近访问。已下架课程从列表入口过滤，但历史学习记录仍保留。学习页提供最近章节与收藏书架，个人页可检索自己的笔记。
+
+\subsection{双模式视频源}
+Bilibili 课程使用对应分集的 \texttt{bvid}、\texttt{page} 和 \texttt{cid}，在页面中嵌入原站播放器，并提供来源站入口。第三方 iframe 不向本站提供可靠的播放秒数，因此系统只记录最近打开的章节，不宣称自动统计这类课程的观看完成度。配置为 MP4/WebM 直链的章节使用原生播放器；播放器在播放期间、暂停、切换章节和离开时保存位置，并可恢复最近章节及秒数。
+
+\subsection{账户、笔记与数据安全}
+密码以 scrypt 摘要保存。登录使用服务端会话和 HttpOnly Cookie，退出时撤销会话。私有笔记、进度和其他写操作使用服务端会话中的用户身份，不信任请求正文里的用户编号。笔记删除检查所有权，课程与章节关联由接口核验。静态资源通过白名单提供，避免任意项目文件被下载。
+
+\section{数据库设计}
+当前 MySQL 结构含 15 张基础表和 1 个视图。核心实体包括 \texttt{users}、\texttt{courses}、\texttt{chapters}、\texttt{notes}、\texttt{comments} 与 \texttt{live\_events}。\texttt{favorites}、\texttt{progress}、\texttt{reservations} 等关联表使用联合主键表达多对多关系；\texttt{course\_visits} 与 \texttt{chapter\_playback} 分别保存最近打开章节和原生播放器播放记录。二者分开，是因为“访问过”不能等同于“看完了”。
+
+当前课程上架状态由 \texttt{courses.published} 表示，\texttt{status} 是保留的旧字段。数据库层已有多项主外键和索引，但 \texttt{users.nickname} 目前没有唯一索引，昵称重复主要由接口检查；这是后续并发注册治理的重点。数据库结构说明以实际 MySQL 元数据导出为准。
+
+\section{测试与结果}
+项目提供三类验证：\texttt{npm test} 在临时 SQLite 库中覆盖认证、课程、进度、私有笔记、越权访问、互动与持久化；\texttt{npm run test:mysql} 使用独立临时 MySQL 实例验证结构升级、迁移和接口；\texttt{npm run test:browser} 在无界面浏览器中验证主要页面交互。\texttt{npm run db:check} 只检查配置的 MySQL 库是否可访问且结构完整；网站实际连接的数据源仍应通过正在运行服务的 \texttt{/api/health} 核对。
+
+上述命令描述的是项目现有测试设计。本答辩材料的编写不等同于重新执行全部业务测试，现场展示应以当时的命令结果和页面状态为准。
+
+\section{设计特点与局限}
+项目的特点是以真实课程来源构建目录，明确区分原站视频与可追踪进度的直链视频；同时用服务端身份校验保护个人笔记与学习记录。响应式界面使用暖米色与绿色视觉体系，并兼顾键盘、触屏和减少动态效果偏好。
+
+当前管理工作台是浏览器本地演示原型，没有正式管理员认证和服务端管理权限。直播预约接口已实现，但课程上传、直播推流和开播提醒尚未实现。Bilibili 播放进度受跨站播放器能力限制。后续可优先建设正式后台授权、完善并发注册唯一性约束，再根据合规的视频接口能力扩展学习统计。
+
+\section{五分钟答辩陈述提纲}
+\begin{enumerate}
+\item \textbf{0:00--0:40 背景与目标：}说明课程分散、续学入口不统一的问题，给出“查找—学习—记录—返回”的设计目标。
+\item \textbf{0:40--1:30 架构：}介绍原生前端、Node.js 同源 API 和 MySQL 数据层；说明服务端会话如何确定个人数据归属。
+\item \textbf{1:30--3:00 功能演示：}在手机尺寸展示首页、发现页、课程筛选和真实课程详情；登录后展示最近章节、收藏与时间点笔记。
+\item \textbf{3:00--3:50 技术重点：}说明原站嵌入与直链播放器的进度差异，展示最近访问和逐章节播放记录的设计。
+\item \textbf{3:50--4:30 数据与测试：}概述 15 张基础表、关键关联表和三类隔离测试；指出正式数据源以健康接口核实。
+\item \textbf{4:30--5:00 总结：}说明管理端仍为本地原型、第三方播放器存在边界，并提出正式后台与数据库约束的后续方向。
+\end{enumerate}
+
+\section*{资料依据}
+本材料依据项目中的 \texttt{README.md}、\texttt{UI设计与展示说明.md}、\texttt{database/数据库表结构说明.md}、\texttt{package.json} 及相应实现文件整理。具体课程与数据库状态请以展示当天系统实际结果为准。
+\end{document}

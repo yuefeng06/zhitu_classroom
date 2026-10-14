@@ -1,7 +1,7 @@
 import { createAdminApi } from './admin-api.mjs';
 import { createCourseSummaries } from './course-summary.mjs';
 import { hashPassword, verifyPassword, createAuthLimiter } from './passwords.mjs';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import { studyDate, shiftDate, checkinSummary } from './checkins.mjs';
 import { catalogCategories, normalizeCategory } from './catalog.mjs';
 import { avatarPath, decodeAvatar, saveAvatar, discardAvatar, readAvatar } from './avatars.mjs';
@@ -68,8 +68,8 @@ export function createApi(db, withMedia = (chapter) => chapter) {
       const uid =
         (
           await get(
-            'SELECT user_id FROM sessions WHERE token=? AND expires>? AND NOT EXISTS (SELECT 1 FROM account_status s WHERE s.user_id=sessions.user_id AND s.disabled=1)',
-            token,
+            'SELECT id AS user_id FROM users WHERE session_token_hash=? AND session_expires>? AND disabled=0',
+            createHash('sha256').update(token).digest('hex'),
             Date.now(),
           )
         )?.user_id || 0;
@@ -137,7 +137,10 @@ export function createApi(db, withMedia = (chapter) => chapter) {
         return send({ user: await user() });
       }
       if (method === 'POST' && path === '/api/auth/logout') {
-        await run('DELETE FROM sessions WHERE token=?', token);
+        await run(
+          'UPDATE users SET session_token_hash=NULL,session_expires=NULL WHERE session_token_hash=?',
+          createHash('sha256').update(token).digest('hex'),
+        );
         res.setHeader('Set-Cookie', 'zhitu-session=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0');
         return send({ ok: true });
       }
@@ -165,18 +168,21 @@ export function createApi(db, withMedia = (chapter) => chapter) {
         } else {
           u = await get('SELECT * FROM users WHERE nickname=?', nickname);
           if (!u) fail('账号或密码错误', 401);
-          if (await get('SELECT 1 FROM account_status WHERE user_id=? AND disabled=1', u.id))
-            fail('账号已停用', 403);
+          if (u.disabled) fail('账号已停用', 403);
           if (!(await verifyPassword(b.password, u.password))) fail('账号或密码错误', 401);
         }
-        await run('DELETE FROM sessions WHERE expires<=?', Date.now());
         const session = randomBytes(32).toString('hex');
-        await run(
-          'INSERT INTO sessions(token,user_id,expires) VALUES(?,?,?)',
-          session,
-          u.id,
-          Date.now() + 7 * 86400000,
-        );
+        await db.transaction(async () => {
+          await db.lockUser(u.id);
+          const current = await get('SELECT disabled FROM users WHERE id=?', u.id);
+          if (!current || current.disabled) fail('账号已停用', 403);
+          await run(
+            'UPDATE users SET session_token_hash=?,session_expires=? WHERE id=?',
+            createHash('sha256').update(session).digest('hex'),
+            Date.now() + 7 * 86400000,
+            u.id,
+          );
+        });
         res.setHeader(
           'Set-Cookie',
           `zhitu-session=${session}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`,
@@ -348,7 +354,7 @@ export function createApi(db, withMedia = (chapter) => chapter) {
         return send({ ok: true });
       }
       const match = path.match(
-        /^\/api\/courses\/(\d+)(?:\/(favorite|coin|follow|progress|comments|danmaku|notes|visit))?$/,
+        /^\/api\/courses\/(\d+)(?:\/(favorite|follow|progress|comments|danmaku|notes|visit))?$/,
       );
       if (match) {
         const id = Number(match[1]),
@@ -389,7 +395,7 @@ export function createApi(db, withMedia = (chapter) => chapter) {
               playback: playback.get(chapter.id) || null,
             })),
             comments: await all(
-              'SELECT comments.*,users.nickname,users.avatar FROM comments JOIN users ON users.id=comments.user_id WHERE course_id=? AND NOT EXISTS (SELECT 1 FROM comment_moderation m WHERE m.comment_id=comments.id AND m.hidden=1) ORDER BY comments.id DESC',
+              'SELECT comments.*,users.nickname,users.avatar FROM comments JOIN users ON users.id=comments.user_id WHERE course_id=? AND comments.hidden=0 ORDER BY comments.id DESC',
               id,
             ),
             danmaku: await all('SELECT * FROM danmaku WHERE course_id=? ORDER BY at_second', id),
@@ -421,8 +427,8 @@ export function createApi(db, withMedia = (chapter) => chapter) {
             });
             return send({ ok: true });
           }
-          if (['favorite', 'coin', 'follow'].includes(kind)) {
-            const table = { favorite: 'favorites', coin: 'coins', follow: 'follows' }[kind],
+          if (['favorite', 'follow'].includes(kind)) {
+            const table = { favorite: 'favorites', follow: 'follows' }[kind],
               column = kind === 'follow' ? 'teacher' : 'course_id',
               value = kind === 'follow' ? c.teacher : id;
             const active = await db.transaction(async () => {

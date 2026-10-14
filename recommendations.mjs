@@ -1,6 +1,6 @@
 // Content ranking + optional, offline-trained BPR matrix factorization.
 // No note contents, passwords or playback-completion assumptions enter this module.
-export const MODEL_VERSION = 2;
+export const MODEL_VERSION = 3;
 const dot = (a, b) => a.reduce((sum, x, i) => sum + x * b[i], 0);
 const sigmoid = (x) => 1 / (1 + Math.exp(-Math.max(-30, Math.min(30, x))));
 export function mergeSignals(rows) {
@@ -22,13 +22,12 @@ export function mergeSignals(rows) {
 }
 export async function readSignals(db, uid = null) {
   const where = uid === null ? '' : ' AND s.user_id=?',
-    args = uid === null ? [] : [uid, uid, uid];
+    args = uid === null ? [] : [uid, uid];
   return mergeSignals(
     await db.all(
       `
     SELECT s.user_id,s.course_id,3 AS weight,s.created_at AS at FROM favorites s JOIN courses c ON c.id=s.course_id WHERE c.published=1${where}
-    UNION ALL SELECT s.user_id,s.course_id,1 AS weight,s.updated_at AS at FROM course_visits s JOIN courses c ON c.id=s.course_id WHERE c.published=1${where}
-    UNION ALL SELECT s.user_id,s.course_id,2 AS weight,s.created_at AS at FROM coins s JOIN courses c ON c.id=s.course_id WHERE c.published=1${where}`,
+    UNION ALL SELECT s.user_id,s.course_id,1 AS weight,s.updated_at AS at FROM course_visits s JOIN courses c ON c.id=s.course_id WHERE c.published=1${where}`,
       ...args,
     ),
   );
@@ -37,7 +36,6 @@ export async function readPopularity(db) {
   return db.all(`SELECT course_id,COUNT(*) AS count FROM (
     SELECT f.user_id,f.course_id FROM favorites f JOIN courses c ON c.id=f.course_id WHERE c.published=1
     UNION SELECT v.user_id,v.course_id FROM course_visits v JOIN courses c ON c.id=v.course_id WHERE c.published=1
-    UNION SELECT k.user_id,k.course_id FROM coins k JOIN courses c ON c.id=k.course_id WHERE c.published=1
   ) interactions GROUP BY course_id`);
 }
 let vectorCache;

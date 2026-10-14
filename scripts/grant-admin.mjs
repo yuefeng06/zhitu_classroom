@@ -11,11 +11,6 @@ try {
       await db.lockUser(rows[0].id);
       if (!(await db.get('SELECT 1 FROM admin_accounts WHERE user_id=?', rows[0].id))) {
         await db.run('INSERT INTO admin_accounts(user_id) VALUES(?)', rows[0].id);
-        await db.run(
-          "INSERT INTO admin_audit(actor_id,action,target_id) VALUES(?,'bootstrap-admin',?)",
-          rows[0].id,
-          rows[0].id,
-        );
       }
     });
   console.log(

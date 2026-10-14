@@ -1,4 +1,5 @@
 import '../config.mjs';
+import { relationships } from '../relationships.mjs';
 import mysql from 'mysql2/promise';
 import { mysqlOptions } from '../config.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
@@ -48,10 +49,10 @@ const labels = {
 const purposes = {
   history_resets: '每账号保存最近清除时间，防止旧播放进度补回访问历史；不删除播放进度。',
   study_checkins: '记录用户按北京时间主动打卡的日期，每账号每天唯一，不代表观看时长。',
-  users: '保存用户身份、昵称、密码摘要及头像信息。',
+  users: '保存用户身份、密码摘要、头像、停用状态及唯一有效会话摘要和过期时间。',
   courses: '保存课程目录及上架信息；分类和学科分别使用 category、subject。',
   chapters: '保存课程分集、时长和展示顺序，每个章节归属于一门课程。',
-  comments: '记录用户对课程发表的评论。',
+  comments: '记录用户对课程发表的评论及其审核隐藏状态。',
   live_events: '保存直播主题、讲师、开始时间和发布状态。',
   notes: '保存用户在指定课程章节、指定视频时间点留下的私有笔记。',
   favorites: '实现 ER 图中用户与课程之间的多对多收藏关系。',
@@ -80,7 +81,7 @@ const shared = {
 };
 const descriptions = {
   history_resets: {
-    user_id: '用户编号，主键与用户外键',
+    user_id: '用户编号，主键；逻辑关联 users.id',
     cleared_at: '最近确认清除历史的服务端时间，UTC',
   },
   study_checkins: {
@@ -93,6 +94,9 @@ const descriptions = {
     password: 'scrypt 密码摘要，不存储明文密码',
     avatar: '头像标识或资源值，可空',
     following: '旧版关注数量字段；当前关注列表从 follows 查询',
+    disabled: '账号停用状态，0 正常，1 停用；停用撤销当前会话',
+    session_token_hash: '当前单会话令牌的 SHA-256 摘要，可空，单列唯一，非明文令牌',
+    session_expires: '当前会话过期时间，Unix 毫秒，可空',
   },
   courses: {
     id: '课程编号',
@@ -120,6 +124,7 @@ const descriptions = {
     id: '评论编号',
     content: '评论内容；当前接口最多接受 1,000 字符',
     likes: '评论点赞数',
+    hidden: '评论审核隐藏状态，0 可见，1 隐藏；迁移自 comment_moderation',
   },
   live_events: {
     id: '直播编号',
@@ -132,7 +137,7 @@ const descriptions = {
     content: '笔记正文；当前接口最多接受 2,000 字符',
   },
   progress: {
-    chapter_id: '最近播放章节，可空；已有真实外键，删除章节时置 NULL',
+    chapter_id: '最近播放章节，可空；逻辑关联 chapters.id，删除章节不再自动置 NULL',
     percent: '课程完成百分比，原生播放记录按章节汇总',
   },
   course_visits: { chapter_id: '最近打开的章节编号', updated_at: '最近访问时间，毫秒精度' },
@@ -168,7 +173,7 @@ Object.assign(purposes, {
   admin_audit: '与管理写入在同一事务记录操作者、动作、目标和时间。',
 });
 Object.assign(descriptions, {
-  admin_accounts: { user_id: '管理员用户编号，主键与外键' },
+  admin_accounts: { user_id: '管理员用户编号，主键；逻辑关联 users.id' },
   account_status: { disabled: '账号停用标志，1 停用，0 正常' },
   admin_articles: {
     summary: '列表摘要',
@@ -248,7 +253,7 @@ try {
   const snapshot = { ...server, captured, tables, columns, indexes, foreignKeys, checks, views };
   let md = '# 知途课堂数据库表结构说明\n\n';
   md += `本说明依据用户提供的 ER 图及当前 MySQL 数据库 ${code(server.database_name)} 的实际元数据整理，供数据库设计报告与课程展示使用。当前包含 **${names.length} 张基础表、${views.length} 个视图**。字段类型、空值、默认值、主外键、索引和删除规则以实际 MySQL 为准；字段业务含义结合当前后端实现说明。\n\n`;
-  md += `MySQL 版本：${server.version}。元数据采集时间：${captured}（UTC）。所有业务表使用 InnoDB；现有表排序规则包含 utf8mb4_unicode_ci 和 utf8mb4_0900_ai_ci，具体以建表定义为准；sessions.token 单列使用 ascii_bin。本文仅导出结构，不包含用户记录、密码摘要值或登录令牌值。\n\n`;
+  md += `MySQL 版本：${server.version}。元数据采集时间：${captured}（UTC）。所有业务表使用 InnoDB；现有表排序规则包含 utf8mb4_unicode_ci 和 utf8mb4_0900_ai_ci，具体以建表定义为准；users.session_token_hash 单列使用 ascii_bin。本文仅导出结构，不包含用户记录、密码摘要值或登录令牌值。\n\n`;
   md += '## 一 ER 图与关系表的对应\n\n';
   md += grid(
     ['ER 图元素', '物理表或字段', '说明'],
@@ -261,7 +266,7 @@ try {
       [
         '用户发表评论、课程拥有评论',
         'comments.user_id、comments.course_id',
-        '两个一对多关系通过评论表外键表达',
+        '两个一对多关系通过评论表的逻辑关联列表达，由接口校验',
       ],
       ['课程包含章节', 'chapters.course_id', '一门课程有多个章节'],
       [
@@ -270,15 +275,15 @@ try {
         '两个一对多关系；notes.course_id 同时关联课程',
       ],
       [
-        '用户收藏、学习、投币课程',
-        'favorites、progress、coins',
-        '三个多对多关系分别建立关联表，均以 user_id 与 course_id 为联合主键',
+        '用户收藏、学习课程',
+        'favorites、progress',
+        '两个多对多关系分别建立关联表，均以 user_id 与 course_id 为联合主键',
       ],
       ['用户预约直播', 'reservations', '多对多关系，以 user_id 与 live_id 为联合主键'],
       [
         '用户登录、注册、设置密码、设置头像',
-        'sessions 与 users 的相关字段',
-        '这些是操作或功能；登录、注册不直接创建同名字段',
+        'users 的身份、状态与会话字段',
+        '每账号一个有效会话；新登录替换旧登录，令牌存储 SHA-256 摘要',
       ],
       [
         '评论删除、笔记创建与删除',
@@ -355,23 +360,19 @@ try {
         'status 是旧字段，published 才是当前后端筛选上架课程的依据；二者并未通过数据库约束自动同步。\n\n';
     if (name === 'progress')
       md +=
-        '当前 MySQL 中 chapter_id 已声明指向 chapters.id 的外键，删除规则为 SET NULL。旧 SQLite 文档中的“仅逻辑关联”不适用于本库。\n\n';
+        'chapter_id 逻辑关联 chapters.id；当前已取消物理外键，直接删除章节不会自动置空。课程管理仅执行上架/下架，不硬删除。\n\n';
   }
-  md += '## 四 外键与删除规则\n\n';
+  md += '## 四 逻辑关联与完整性责任\n\n';
   md += grid(
-    ['子表字段', '父表字段', '外键名称', '删除规则', '更新规则'],
-    foreignKeys.map((k) => [
-      k.TABLE_NAME + '.' + k.COLUMN_NAME,
-      k.REFERENCED_TABLE_NAME + '.' + k.REFERENCED_COLUMN_NAME,
-      k.CONSTRAINT_NAME,
-      k.DELETE_RULE,
-      k.UPDATE_RULE,
-    ]),
+    ['关联字段', '目标字段', '约束方式'],
+    relationships
+      .filter(([t]) => names.includes(t))
+      .map(([t, c, p]) => [t + '.' + c, p + '.id', '应用层逻辑校验，无物理外键']),
   );
   md +=
-    '\nCASCADE 表示删除父记录时级联删除对应子记录；SET NULL 表示将子表外键置空；NO ACTION 在本 InnoDB 库中会阻止违反引用完整性的操作。删除课程时还可能被 notes、course_visits 等 NO ACTION 关系阻止，不能仅因部分外键是 CASCADE 就认为整门课程可直接删除。\n\n';
+    '\n当前业务库没有物理外键约束。主键、唯一索引、普通关联索引仍保留；名称以 fk_ 开头的普通索引不是外键。数据库不再自动阻止孤儿引用，也不会级联删除或自动置空。后台仅下架课程、停用账号，关联存在性与章节所属课程由接口校验，直接 SQL 写入须自行维护完整性。\n\n';
   md +=
-    'notes、course_visits 和 progress 的 course_id 与 chapter_id 是分别关联课程、章节的单列外键，未通过组合外键保证“该章节必然属于该课程”；当前后端在相应写入接口中检查这一关系。notes 的用户归属和私有可见性也由接口校验。\n\n';
+    'notes、course_visits 和 progress 的 course_id 与 chapter_id 是逻辑关联列；后端检查章节属于课程以及当前用户的数据归属。登录会话和账号状态已并入 users；审核状态已并入 comments；投币与管理审计功能已移除。\n\n';
   md += '## 五 统计视图\n\n';
   for (const view of views) {
     md += `### ${view.TABLE_NAME}\n\n课程评论数量查询视图，不存储独立业务记录。当前视图按课程标题分组，同名课程的评论数量会合并。\n\n`;
@@ -389,11 +390,11 @@ try {
     md += '\n```sql\n' + view.VIEW_DEFINITION + ';\n```\n\n';
   }
   md += '## 六 实现边界与交付文件\n\n';
-  md += `当前库检测到 ${checks.length} 条 CHECK 约束。数据库字段保留现状，包括直播开始时间 VARCHAR、部分带符号主键以及可空会话和预约外键；未为了与概念图一致而修改现有库。\n\n`;
+  md += `当前库检测到 ${checks.length} 条 CHECK 约束。数据库字段保留现状，包括直播开始时间 VARCHAR 和部分带符号主键；单会话摘要及过期时间允许 NULL。\n\n`;
   md +=
-    '讲师以姓名文本保存，尚未建立教师表；视频源映射来自项目 JSON 文件，未单独建视频源表。原有精选经验和《提问的智慧》为静态内容；后台新建文章保存在 admin_articles，发布后在发现页展示。管理员身份、账号停用、评论隐藏与操作审计分别使用新增管理表，管理写入由服务端会话和权限校验保护。\n\n';
+    '讲师以姓名文本保存，尚未建立教师表；视频源映射来自项目 JSON 文件，未单独建视频源表。原有精选经验和《提问的智慧》为静态内容；后台新建文章保存在 admin_articles，发布后在发现页展示。管理员身份使用 admin_accounts；账号状态与会话并入 users，评论隐藏状态并入 comments；不再保存管理操作审计，管理写入仍由服务端会话、权限、事务和行版本校验保护。\n\n';
   md +=
-    '- `数据库表结构说明.md`：本说明，可用于报告编写。\n- `数据库表结构说明.html`：浏览器阅读与打印版。\n- `mysql-actual-schema.sql`：由当前库 SHOW CREATE TABLE 导出的空库建表脚本，不含业务数据；保留实际主外键与索引。去掉自增计数起点，视图改为 SQL SECURITY INVOKER 并移除源库限定名，便于导入新的空库。\n- `mysql-structure-snapshot.json`：机器可读元数据，用于复核字段和约束。\n\nSQL 脚本不包含 DROP、不含 INSERT，也不切换数据库。应在新建空库中执行，不要在当前业务库重复执行。\n';
+    '- `数据库表结构说明.md`：本说明，可用于报告编写。\n- `数据库表结构说明.html`：浏览器阅读与打印版。\n- `mysql-actual-schema.sql`：由当前库 SHOW CREATE TABLE 导出的空库建表脚本，不含业务数据；保留实际主键、唯一索引和普通索引。去掉自增计数起点，视图改为 SQL SECURITY INVOKER 并移除源库限定名，便于导入新的空库。\n- `mysql-structure-snapshot.json`：机器可读元数据，用于复核字段和约束。\n\nSQL 脚本不包含 DROP、不含 INSERT，也不切换数据库。应在新建空库中执行，不要在当前业务库重复执行。\n';
   const ddls = new Map();
   for (const name of names) {
     const [[ddl]] = await db.query('SHOW CREATE TABLE `' + name + '`');
@@ -476,6 +477,32 @@ try {
   await writeFile(join(directory, '数据库表结构说明.md'), md);
   await writeFile(join(directory, '数据库表结构说明.html'), html);
   await writeFile(join(directory, 'mysql-actual-schema.sql'), sql);
+  const diagram = [
+    'erDiagram',
+    '  %% Logical relationships only; no physical foreign keys.',
+    ...names.map((name) => '  ' + name),
+    ...relationships
+      .filter(([t]) => names.includes(t))
+      .map(([t, c, p]) => {
+        const optional =
+          columns.find((v) => v.TABLE_NAME === t && v.COLUMN_NAME === c)?.IS_NULLABLE === 'YES';
+        const single = keys(t).length === 1 && keys(t)[0] === c;
+        return (
+          '  ' +
+          p +
+          ' ' +
+          (optional ? '|o' : '||') +
+          '..' +
+          (single ? 'o|' : 'o{') +
+          ' ' +
+          t +
+          ' : "' +
+          c +
+          '"'
+        );
+      }),
+  ].join('\n');
+  await writeFile(join(directory, 'ER-current.mmd'), diagram + '\n');
   await writeFile(
     join(directory, 'mysql-structure-snapshot.json'),
     JSON.stringify(snapshot, null, 2),

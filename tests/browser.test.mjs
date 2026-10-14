@@ -363,7 +363,11 @@ test(
       await evaluate(
         "document.querySelector('.published-reader button').click();location.hash='#/admin/audit'",
       );
-      await until("document.querySelector('.admin-table').textContent.includes('article-create')");
+      await until("document.querySelector('.metric-grid')!==null");
+      assert.equal(
+        await evaluate('document.querySelector(\'a[href="#/admin/audit"]\')===null'),
+        true,
+      );
       assert.deepEqual(errors, []);
       return;
     }

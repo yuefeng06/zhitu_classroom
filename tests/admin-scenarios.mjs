@@ -19,6 +19,17 @@ export async function checkAdminApi(base, grant) {
   await request('/api/admin/dashboard', 'GET', undefined, 403);
   await grant(admin.id);
   assert.ok((await request('/api/admin/dashboard')).courses >= 33);
+  const oldCookie = cookie;
+  await request('/api/auth/login', 'POST', { nickname: '管理验证', password: 'admin-test' });
+  assert.notEqual(cookie, oldCookie);
+  await request('/api/me/notes', 'GET', undefined, 401, oldCookie);
+  // Signing out a superseded session must not revoke the replacement session.
+  const oldLogout = await fetch(base + '/api/auth/logout', {
+    method: 'POST',
+    headers: { Cookie: oldCookie },
+  });
+  assert.equal(oldLogout.status, 200);
+  assert.equal((await request('/api/auth/me')).user.id, admin.id);
   const adminCookie = cookie;
   const concurrent = await Promise.all(
     Array.from({ length: 8 }, () =>
@@ -91,7 +102,15 @@ export async function checkAdminApi(base, grant) {
   await request('/api/admin/comments/' + comment.id, 'PATCH', { ...hidden, hidden: 0 });
   assert.ok((await request('/api/courses/17')).comments.some((c) => c.id === comment.id));
   const users = (await request('/api/admin/users')).rows;
-  assert.ok(users.every((u) => !('password' in u) && !('token' in u)));
+  assert.ok(
+    users.every(
+      (u) =>
+        !('password' in u) &&
+        !('token' in u) &&
+        !('session_token_hash' in u) &&
+        !('session_expires' in u),
+    ),
+  );
   const member = users.find((u) => u.id === regular.id);
   const disabled = await request('/api/admin/users/' + member.id, 'PATCH', {
     ...member,
@@ -107,7 +126,7 @@ export async function checkAdminApi(base, grant) {
   await request('/api/admin/users/' + member.id, 'PATCH', { ...disabled, disabled: 0 });
   const self = users.find((u) => u.id === admin.id);
   await request('/api/admin/users/' + self.id, 'PATCH', { ...self, disabled: 1 }, 400);
-  assert.ok((await request('/api/admin/audit')).length >= 8);
+  await request('/api/admin/audit', 'GET', undefined, 404);
   await request('/api/admin/articles/' + published.id, 'PATCH', { ...published, published: 0 });
   await request('/api/articles/' + published.id, 'GET', undefined, 404, '');
 }

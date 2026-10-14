@@ -16,7 +16,6 @@ export async function renderAdmin({
     articles: '文章管理',
     comments: '讨论审核',
     users: '用户管理',
-    audit: '操作审计',
   };
   const key = path.split('/')[2] || 'dashboard',
     kind = sections[key] ? key : 'dashboard';
@@ -64,11 +63,11 @@ export async function renderAdmin({
         )
         .join(
           '',
-        )}</div><section class="admin-panel"><h2>${uiText('内容工作台')}</h2><p>${uiText('课程、文章和讨论的修改将保存到服务器，并记录操作审计。')}</p><a href="#/admin/courses">${uiText('课程管理')} →</a></section>`;
+        )}</div><section class="admin-panel"><h2>${uiText('内容工作台')}</h2><p>${uiText('课程、文章和讨论的修改将保存到服务器。')}</p><a href="#/admin/courses">${uiText('课程管理')} →</a></section>`;
       return;
     }
-    const rows = kind === 'audit' ? data : data.rows;
-    content.innerHTML = `<section class="admin-panel"><p role="status">${uiText('记录数')}：${kind === 'audit' ? rows.length : data.total}</p><div class="table-scroll"><table class="admin-table"><thead><tr><th>ID</th><th>${uiText('内容')}</th><th>${uiText('状态')}</th>${kind === 'audit' ? '' : `<th>${uiText('操作')}</th>`}</tr></thead><tbody>${rows.map((r) => `<tr><td>${r.id}</td><td data-original-content>${esc(kind === 'audit' ? `${r.action} · ${r.target_id} · ${r.created_at}` : r.title || r.nickname || r.content)}</td><td>${kind === 'audit' ? esc('账号 ' + r.actor_id) : uiText(kind === 'users' ? (r.is_admin ? '管理员' : r.disabled ? '已停用' : '正常') : kind === 'comments' ? (r.hidden ? '已隐藏' : '可见') : r.published ? '已发布' : '未发布')}</td>${kind === 'audit' ? '' : `<td><button type="button" class="text-action" data-edit="${r.id}" ${kind === 'users' && r.is_admin ? 'disabled' : ''}>${uiText('编辑')}</button></td>`}</tr>`).join('')}</tbody></table></div>${!rows.length ? `<p class="helper">${uiText('暂无记录')}</p>` : ''}${kind === 'audit' ? '' : `<div class="admin-pagination"><button data-prev ${page <= 1 ? 'disabled' : ''}>${uiText('上一页')}</button><span>${page} / ${Math.max(1, Math.ceil(data.total / 50))}</span><button data-next ${page * 50 >= data.total ? 'disabled' : ''}>${uiText('下一页')}</button></div>`}</section>`;
+    const rows = data.rows;
+    content.innerHTML = `<section class="admin-panel"><p role="status">${uiText('记录数')}：${data.total}</p><div class="table-scroll"><table class="admin-table"><thead><tr><th>ID</th><th>${uiText('内容')}</th><th>${uiText('状态')}</th><th>${uiText('操作')}</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${r.id}</td><td data-original-content>${esc(r.title || r.nickname || r.content)}</td><td>${uiText(kind === 'users' ? (r.is_admin ? '管理员' : r.disabled ? '已停用' : '正常') : kind === 'comments' ? (r.hidden ? '已隐藏' : '可见') : r.published ? '已发布' : '未发布')}</td>${`<td><button type="button" class="text-action" data-edit="${r.id}" ${kind === 'users' && r.is_admin ? 'disabled' : ''}>${uiText('编辑')}</button></td>`}</tr>`).join('')}</tbody></table></div>${!rows.length ? `<p class="helper">${uiText('暂无记录')}</p>` : ''}${`<div class="admin-pagination"><button data-prev ${page <= 1 ? 'disabled' : ''}>${uiText('上一页')}</button><span>${page} / ${Math.max(1, Math.ceil(data.total / 50))}</span><button data-next ${page * 50 >= data.total ? 'disabled' : ''}>${uiText('下一页')}</button></div>`}</section>`;
     content
       .querySelectorAll('[data-edit]')
       .forEach(

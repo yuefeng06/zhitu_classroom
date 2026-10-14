@@ -1,0 +1,43 @@
+erDiagram
+  %% Logical relationships only; no physical foreign keys.
+  users
+  history_resets
+  study_checkins
+  courses
+  chapters
+  comments
+  live_events
+  notes
+  favorites
+  progress
+  reservations
+  course_visits
+  chapter_playback
+  follows
+  danmaku
+  admin_accounts
+  admin_articles
+  courses ||..o{ chapters : "course_id"
+  users ||..o{ comments : "user_id"
+  courses ||..o{ comments : "course_id"
+  courses ||..o{ danmaku : "course_id"
+  chapters |o..o{ danmaku : "chapter_id"
+  users ||..o{ favorites : "user_id"
+  courses ||..o{ favorites : "course_id"
+  users ||..o{ follows : "user_id"
+  users ||..o{ progress : "user_id"
+  courses ||..o{ progress : "course_id"
+  chapters |o..o{ progress : "chapter_id"
+  users ||..o{ course_visits : "user_id"
+  courses ||..o{ course_visits : "course_id"
+  chapters ||..o{ course_visits : "chapter_id"
+  users ||..o{ chapter_playback : "user_id"
+  chapters ||..o{ chapter_playback : "chapter_id"
+  users ||..o{ notes : "user_id"
+  courses ||..o{ notes : "course_id"
+  chapters ||..o{ notes : "chapter_id"
+  users ||..o{ reservations : "user_id"
+  live_events ||..o{ reservations : "live_id"
+  users ||..o{ study_checkins : "user_id"
+  users ||..o| history_resets : "user_id"
+  users ||..o| admin_accounts : "user_id"

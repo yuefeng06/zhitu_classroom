@@ -15,7 +15,7 @@ test('批量课程摘要保持归属与顺序，匿名零附加查询', async ()
   });
   const courses = [{ id: 2 }, { id: 1 }];
   const rows = await summarize(courses, 7);
-  assert.equal(calls, 4);
+  assert.equal(calls, 3);
   assert.equal(rows[0].favorite, true);
   assert.equal(rows[1].progress, 30);
   assert.equal(rows[1].chapter_id, 9);

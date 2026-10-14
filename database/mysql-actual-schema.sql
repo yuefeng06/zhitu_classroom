@@ -1,4 +1,4 @@
--- 知途课堂 MySQL 实际结构，源库 zhitu_classroom，2026-10-09T00:46:01.286Z
+-- 知途课堂 MySQL 实际结构，源库 zhitu_classroom，2026-10-14T10:52:05.133Z
 -- 仅在已选中的新空库执行；不包含数据、DROP 或 USE。
 -- 自增计数起点已省略；视图使用 SQL SECURITY INVOKER，移除源库限定名。
 SET NAMES utf8mb4;
@@ -10,23 +10,25 @@ CREATE TABLE `users` (
   `avatar` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `following` int unsigned NOT NULL DEFAULT '0',
   `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3),
+  `disabled` bigint NOT NULL DEFAULT '0',
+  `session_token_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `session_expires` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_users_nickname` (`nickname`)
+  UNIQUE KEY `uq_users_nickname` (`nickname`),
+  UNIQUE KEY `uq_users_session_token_hash` (`session_token_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
 
 CREATE TABLE `history_resets` (
   `user_id` bigint unsigned NOT NULL,
   `cleared_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  PRIMARY KEY (`user_id`),
-  CONSTRAINT `fk_history_resets_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+  PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `study_checkins` (
   `user_id` bigint unsigned NOT NULL,
   `checkin_date` date NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  PRIMARY KEY (`user_id`,`checkin_date`),
-  CONSTRAINT `fk_study_checkins_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+  PRIMARY KEY (`user_id`,`checkin_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `courses` (
@@ -58,8 +60,7 @@ CREATE TABLE `chapters` (
   `is_free` tinyint NOT NULL DEFAULT '0',
   `position` smallint unsigned NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_chapter_position` (`course_id`,`position`),
-  CONSTRAINT `fk_chapter_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE
+  UNIQUE KEY `uk_chapter_position` (`course_id`,`position`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程章节表';
 
 CREATE TABLE `comments` (
@@ -69,11 +70,10 @@ CREATE TABLE `comments` (
   `content` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `likes` int unsigned NOT NULL DEFAULT '0',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `hidden` bigint NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `fk_comment_course` (`course_id`),
-  KEY `fk_comment_user` (`user_id`),
-  CONSTRAINT `fk_comment_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_comment_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  KEY `fk_comment_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程评论表';
 
 CREATE TABLE `live_events` (
@@ -96,10 +96,7 @@ CREATE TABLE `notes` (
   PRIMARY KEY (`id`),
   KEY `fk_notes_chapter_id` (`chapter_id`),
   KEY `fk_notes_course_id` (`course_id`),
-  KEY `fk_notes_user_id` (`user_id`),
-  CONSTRAINT `fk_notes_chapter_id` FOREIGN KEY (`chapter_id`) REFERENCES `chapters` (`id`),
-  CONSTRAINT `fk_notes_course_id` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`),
-  CONSTRAINT `fk_notes_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+  KEY `fk_notes_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学习笔记';
 
 CREATE TABLE `favorites` (
@@ -107,9 +104,7 @@ CREATE TABLE `favorites` (
   `course_id` bigint unsigned NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`user_id`,`course_id`),
-  KEY `fk_favorite_course` (`course_id`),
-  CONSTRAINT `fk_favorite_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_favorite_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  KEY `fk_favorite_course` (`course_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程收藏表';
 
 CREATE TABLE `progress` (
@@ -120,29 +115,14 @@ CREATE TABLE `progress` (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`user_id`,`course_id`),
   KEY `fk_progress_course` (`course_id`),
-  KEY `fk_progress_chapter` (`chapter_id`),
-  CONSTRAINT `fk_progress_chapter` FOREIGN KEY (`chapter_id`) REFERENCES `chapters` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `fk_progress_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_progress_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  KEY `fk_progress_chapter` (`chapter_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户学习进度表';
-
-CREATE TABLE `coins` (
-  `user_id` bigint unsigned NOT NULL,
-  `course_id` bigint unsigned NOT NULL,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`user_id`,`course_id`),
-  KEY `fk_coin_course` (`course_id`),
-  CONSTRAINT `fk_coin_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_coin_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程投币表';
 
 CREATE TABLE `reservations` (
   `user_id` bigint unsigned NOT NULL,
   `live_id` bigint NOT NULL,
   PRIMARY KEY (`user_id`,`live_id`),
-  KEY `fk_reservations_live_id` (`live_id`),
-  CONSTRAINT `fk_reservations_live_id` FOREIGN KEY (`live_id`) REFERENCES `live_events` (`id`),
-  CONSTRAINT `fk_reservations_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+  KEY `fk_reservations_live_id` (`live_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='直播预约';
 
 CREATE TABLE `course_visits` (
@@ -152,10 +132,7 @@ CREATE TABLE `course_visits` (
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`user_id`,`course_id`),
   KEY `fk_course_visits_chapter_id` (`chapter_id`),
-  KEY `fk_course_visits_course_id` (`course_id`),
-  CONSTRAINT `fk_course_visits_chapter_id` FOREIGN KEY (`chapter_id`) REFERENCES `chapters` (`id`),
-  CONSTRAINT `fk_course_visits_course_id` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`),
-  CONSTRAINT `fk_course_visits_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+  KEY `fk_course_visits_course_id` (`course_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='最近访问';
 
 CREATE TABLE `chapter_playback` (
@@ -165,25 +142,13 @@ CREATE TABLE `chapter_playback` (
   `duration` double NOT NULL,
   `percent` double NOT NULL DEFAULT '0',
   PRIMARY KEY (`user_id`,`chapter_id`),
-  KEY `fk_chapter_playback_chapter_id` (`chapter_id`),
-  CONSTRAINT `fk_chapter_playback_chapter_id` FOREIGN KEY (`chapter_id`) REFERENCES `chapters` (`id`),
-  CONSTRAINT `fk_chapter_playback_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+  KEY `fk_chapter_playback_chapter_id` (`chapter_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='章节播放';
-
-CREATE TABLE `sessions` (
-  `token` varchar(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  `user_id` bigint unsigned DEFAULT NULL,
-  `expires` bigint NOT NULL,
-  PRIMARY KEY (`token`),
-  KEY `fk_sessions_user_id` (`user_id`),
-  CONSTRAINT `fk_sessions_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='登录会话';
 
 CREATE TABLE `follows` (
   `user_id` bigint unsigned NOT NULL,
   `teacher` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  PRIMARY KEY (`user_id`,`teacher`),
-  CONSTRAINT `fk_follow_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  PRIMARY KEY (`user_id`,`teacher`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='讲师关注表';
 
 CREATE TABLE `danmaku` (
@@ -196,23 +161,13 @@ CREATE TABLE `danmaku` (
   `chapter_id` bigint unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_danmaku_course` (`course_id`),
-  KEY `fk_danmaku_chapter_id` (`chapter_id`),
-  CONSTRAINT `fk_danmaku_chapter_id` FOREIGN KEY (`chapter_id`) REFERENCES `chapters` (`id`),
-  CONSTRAINT `fk_danmaku_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE
+  KEY `fk_danmaku_chapter_id` (`chapter_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='视频弹幕表';
-
-CREATE TABLE `account_status` (
-  `user_id` bigint unsigned NOT NULL,
-  `disabled` bigint NOT NULL DEFAULT '0',
-  PRIMARY KEY (`user_id`),
-  CONSTRAINT `fk_account_status_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `admin_accounts` (
   `user_id` bigint unsigned NOT NULL,
   `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  PRIMARY KEY (`user_id`),
-  CONSTRAINT `fk_admin_accounts_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+  PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE `admin_articles` (
@@ -224,24 +179,6 @@ CREATE TABLE `admin_articles` (
   `published` bigint NOT NULL DEFAULT '0',
   `updated_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-CREATE TABLE `admin_audit` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `actor_id` bigint unsigned NOT NULL,
-  `action` varchar(80) NOT NULL,
-  `target_id` bigint NOT NULL,
-  `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-  PRIMARY KEY (`id`),
-  KEY `fk_admin_audit_actor` (`actor_id`),
-  CONSTRAINT `fk_admin_audit_actor` FOREIGN KEY (`actor_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-CREATE TABLE `comment_moderation` (
-  `comment_id` bigint unsigned NOT NULL,
-  `hidden` bigint NOT NULL DEFAULT '0',
-  PRIMARY KEY (`comment_id`),
-  CONSTRAINT `fk_comment_moderation_comment` FOREIGN KEY (`comment_id`) REFERENCES `comments` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE SQL SECURITY INVOKER VIEW `v_course_comment_stats` AS select `c`.`title` AS `课程`,count(`cm`.`id`) AS `评论数` from (`courses` `c` left join `comments` `cm` on((`cm`.`course_id` = `c`.`id`))) group by `c`.`title`;

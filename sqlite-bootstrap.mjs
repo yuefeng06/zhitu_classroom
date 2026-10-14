@@ -1,26 +1,34 @@
 import { scryptSync, randomBytes } from 'node:crypto';
 import { syncVideoCatalog } from './catalog.mjs';
 export function initializeSqlite(db) {
+  // Reject legacy files before any writes; historical SQLite data is not the business store.
+  if (
+    db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get() &&
+    !db
+      .prepare('PRAGMA table_info(users)')
+      .all()
+      .some((c) => c.name === 'session_token_hash')
+  )
+    throw Error(
+      '旧 SQLite 结构不再用于业务启动；请使用独立新测试库，MySQL 业务库使用 simplify-schema 增量迁移',
+    );
   const hash = (password) => {
     const salt = randomBytes(16).toString('hex');
     return `scrypt:${salt}:${scryptSync(password, salt, 64).toString('hex')}`;
   };
   db.exec(`PRAGMA foreign_keys = ON;
-CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, nickname TEXT UNIQUE NOT NULL, password TEXT NOT NULL, avatar TEXT DEFAULT '学', following INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS study_checkins (user_id INTEGER NOT NULL REFERENCES users(id),checkin_date TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,checkin_date));
-CREATE TABLE IF NOT EXISTS history_resets (user_id INTEGER PRIMARY KEY REFERENCES users(id),cleared_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS admin_accounts (user_id INTEGER PRIMARY KEY REFERENCES users(id),created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS account_status (user_id INTEGER PRIMARY KEY REFERENCES users(id),disabled INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, nickname TEXT UNIQUE NOT NULL, password TEXT NOT NULL, avatar TEXT DEFAULT '学', following INTEGER DEFAULT 0, disabled INTEGER NOT NULL DEFAULT 0, session_token_hash TEXT UNIQUE, session_expires INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS study_checkins (user_id INTEGER NOT NULL,checkin_date TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(user_id,checkin_date));
+CREATE TABLE IF NOT EXISTS history_resets (user_id INTEGER PRIMARY KEY,cleared_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS admin_accounts (user_id INTEGER PRIMARY KEY,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS admin_articles (id INTEGER PRIMARY KEY,title TEXT NOT NULL,summary TEXT NOT NULL,content TEXT NOT NULL,source_url TEXT NOT NULL DEFAULT '',published INTEGER NOT NULL DEFAULT 0,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS admin_audit (id INTEGER PRIMARY KEY,actor_id INTEGER NOT NULL REFERENCES users(id),action TEXT NOT NULL,target_id INTEGER NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS courses (id INTEGER PRIMARY KEY, title TEXT NOT NULL, category TEXT NOT NULL, teacher TEXT NOT NULL, description TEXT NOT NULL, cover TEXT NOT NULL, accent TEXT NOT NULL, lessons INTEGER NOT NULL, students INTEGER DEFAULT 0, duration TEXT NOT NULL, level TEXT DEFAULT '入门', created_at TEXT DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS chapters (id INTEGER PRIMARY KEY, course_id INTEGER NOT NULL REFERENCES courses(id), title TEXT NOT NULL, duration TEXT NOT NULL, is_free INTEGER DEFAULT 0, position INTEGER NOT NULL);
-CREATE TABLE IF NOT EXISTS progress (user_id INTEGER NOT NULL REFERENCES users(id), course_id INTEGER NOT NULL REFERENCES courses(id), chapter_id INTEGER, percent INTEGER DEFAULT 0, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_id, course_id));
-CREATE TABLE IF NOT EXISTS favorites (user_id INTEGER NOT NULL REFERENCES users(id), course_id INTEGER NOT NULL REFERENCES courses(id), created_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_id, course_id));
-CREATE TABLE IF NOT EXISTS coins (user_id INTEGER NOT NULL REFERENCES users(id), course_id INTEGER NOT NULL REFERENCES courses(id), created_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_id, course_id));
-CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY, course_id INTEGER NOT NULL REFERENCES courses(id), user_id INTEGER NOT NULL REFERENCES users(id), content TEXT NOT NULL, likes INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS danmaku (id INTEGER PRIMARY KEY, course_id INTEGER NOT NULL REFERENCES courses(id), content TEXT NOT NULL, at_second INTEGER DEFAULT 8, color TEXT DEFAULT '#ffffff', created_at TEXT DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS follows (user_id INTEGER NOT NULL REFERENCES users(id), teacher TEXT NOT NULL, PRIMARY KEY(user_id, teacher));`);
+CREATE TABLE IF NOT EXISTS chapters (id INTEGER PRIMARY KEY, course_id INTEGER NOT NULL, title TEXT NOT NULL, duration TEXT NOT NULL, is_free INTEGER DEFAULT 0, position INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS progress (user_id INTEGER NOT NULL, course_id INTEGER NOT NULL, chapter_id INTEGER, percent INTEGER DEFAULT 0, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_id, course_id));
+CREATE TABLE IF NOT EXISTS favorites (user_id INTEGER NOT NULL, course_id INTEGER NOT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(user_id, course_id));
+CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY, course_id INTEGER NOT NULL, user_id INTEGER NOT NULL, content TEXT NOT NULL, likes INTEGER DEFAULT 0, hidden INTEGER NOT NULL DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS danmaku (id INTEGER PRIMARY KEY, course_id INTEGER NOT NULL, content TEXT NOT NULL, at_second INTEGER DEFAULT 8, color TEXT DEFAULT '#ffffff', created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS follows (user_id INTEGER NOT NULL, teacher TEXT NOT NULL, PRIMARY KEY(user_id, teacher));`);
 
   const count = db.prepare('SELECT count(*) AS n FROM courses').get().n;
   if (!count) {
@@ -45,10 +53,8 @@ CREATE TABLE IF NOT EXISTS follows (user_id INTEGER NOT NULL REFERENCES users(id
   INSERT INTO danmaku(course_id,content,at_second,color) VALUES(4,'老师讲得太清楚了',4,'#ffffff'),(4,'这一步很关键！',10,'#ffd86b'),(4,'收藏了，晚上复习',17,'#b7f4d0');`);
   }
 
-  db.exec(`CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER REFERENCES users(id), expires INTEGER NOT NULL);
-    CREATE TABLE IF NOT EXISTS comment_moderation (comment_id INTEGER PRIMARY KEY REFERENCES comments(id),hidden INTEGER NOT NULL DEFAULT 0);
-    CREATE TABLE IF NOT EXISTS live_events (id INTEGER PRIMARY KEY, title TEXT NOT NULL, teacher TEXT NOT NULL, starts_at TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS reservations (user_id INTEGER REFERENCES users(id), live_id INTEGER REFERENCES live_events(id), PRIMARY KEY(user_id,live_id));`);
+  db.exec(`CREATE TABLE IF NOT EXISTS live_events (id INTEGER PRIMARY KEY, title TEXT NOT NULL, teacher TEXT NOT NULL, starts_at TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS reservations (user_id INTEGER, live_id INTEGER, PRIMARY KEY(user_id,live_id));`);
   for (const u of db.prepare('SELECT id,password FROM users').all()) {
     if (!u.password.startsWith('scrypt:'))
       db.prepare('UPDATE users SET password=? WHERE id=?').run(hash(u.password), u.id);
@@ -57,8 +63,8 @@ CREATE TABLE IF NOT EXISTS follows (user_id INTEGER NOT NULL REFERENCES users(id
   const all = (sql, ...args) => db.prepare(sql).all(...args);
   const run = (sql, ...args) => db.prepare(sql).run(...args);
   db.exec(`CREATE TABLE IF NOT EXISTS course_visits (
-    user_id INTEGER NOT NULL REFERENCES users(id),course_id INTEGER NOT NULL REFERENCES courses(id),
-    chapter_id INTEGER NOT NULL REFERENCES chapters(id),updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    user_id INTEGER NOT NULL,course_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(user_id,course_id));`);
   if (!all('PRAGMA table_info(live_events)').some((c) => c.name === 'published'))
     db.exec('ALTER TABLE live_events ADD COLUMN published INTEGER NOT NULL DEFAULT 1');
@@ -70,13 +76,13 @@ CREATE TABLE IF NOT EXISTS follows (user_id INTEGER NOT NULL REFERENCES users(id
     INSERT OR IGNORE INTO chapters (id,course_id,title,duration,is_free,position) VALUES (9001,9,'高等数学全程课 · 原站完整视频','4:36:23',1,1);`);
   syncVideoCatalog(db);
   db.exec(`CREATE TABLE IF NOT EXISTS chapter_playback (
-    user_id INTEGER NOT NULL REFERENCES users(id), chapter_id INTEGER NOT NULL REFERENCES chapters(id),
+    user_id INTEGER NOT NULL, chapter_id INTEGER NOT NULL,
     current_time REAL NOT NULL DEFAULT 0, duration REAL NOT NULL, percent REAL NOT NULL DEFAULT 0,
     PRIMARY KEY(user_id,chapter_id));
     CREATE TABLE IF NOT EXISTS notes (
-    id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), course_id INTEGER NOT NULL REFERENCES courses(id),
-    chapter_id INTEGER NOT NULL REFERENCES chapters(id), at_second REAL NOT NULL, content TEXT NOT NULL,
+    id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, course_id INTEGER NOT NULL,
+    chapter_id INTEGER NOT NULL, at_second REAL NOT NULL, content TEXT NOT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
   if (!all('PRAGMA table_info(danmaku)').some((x) => x.name === 'chapter_id'))
-    db.exec('ALTER TABLE danmaku ADD COLUMN chapter_id INTEGER REFERENCES chapters(id)');
+    db.exec('ALTER TABLE danmaku ADD COLUMN chapter_id INTEGER');
 }

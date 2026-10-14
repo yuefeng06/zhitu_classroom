@@ -26,7 +26,12 @@ export async function openDatabase() {
     const native = new DatabaseSync(
       process.env.DB_PATH || fileURLToPath(new URL('./zhitu.db', import.meta.url)),
     );
-    initializeSqlite(native);
+    try {
+      initializeSqlite(native);
+    } catch (error) {
+      native.close();
+      throw error;
+    }
     let queue = Promise.resolve();
     return {
       dialect,

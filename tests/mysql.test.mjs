@@ -1,3 +1,4 @@
+import { checkSchemaSimplification } from './schema-simplification.mjs';
 import { checkAdminApi } from './admin-scenarios.mjs';
 import { syncMysqlCatalog } from '../scripts/sync-mysql-catalog.mjs';
 import { test } from 'node:test';
@@ -116,9 +117,11 @@ test(
       'CREATE DATABASE zhitu_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci',
     );
     await connection.query('USE zhitu_test');
+    await t.test('旧22表精简迁移、预检、恢复与幂等', async () =>
+      checkSchemaSimplification(connection, dir),
+    );
     // Reproduce the user's old ten-table schema with UNSIGNED parent IDs.
     const added = new Set([
-      'sessions',
       'course_visits',
       'chapter_playback',
       'notes',
@@ -126,10 +129,7 @@ test(
       'study_checkins',
       'history_resets',
       'admin_accounts',
-      'account_status',
       'admin_articles',
-      'comment_moderation',
-      'admin_audit',
     ]);
     for (const table of schemaTables.filter((t) => !added.has(t.name))) {
       let sql = table.sql.replace(/BIGINT/g, 'BIGINT UNSIGNED');
@@ -138,7 +138,7 @@ test(
       if (table.name === 'danmaku')
         sql = sql
           .replace(/^  `chapter_id`[^\n]*\n/gm, '')
-          .replace(/^  CONSTRAINT fk_danmaku_chapter_id[^\n]*\n/gm, '');
+          .replace(/^  KEY `idx_chapter_id`[^\n]*\n/gm, '');
       if (table.name === 'users')
         sql = sql
           .replace('`password`', '`password_hash`')
@@ -160,7 +160,7 @@ test(
       )
       .run('迁移前的私有笔记');
     sqlite.close();
-    await t.test('保留旧账号，补表时匹配 UNSIGNED 外键，完整迁移可重复执行', async () => {
+    await t.test('保留旧账号及 UNSIGNED 关联列，完整迁移可重复执行', async () => {
       const result = await migrateMysql({ sourcePath, backupDir: join(dir, 'backup-1') });
       assert.ok(result.ok);
       assert.equal(result.tables.notes.target, 1);
@@ -313,7 +313,7 @@ test(
       ])
         assert.equal((await request('/api/courses/' + id)).chapters.length, count);
     });
-    await t.test('打卡真实落库，日期唯一与用户外键匹配', async () => {
+    await t.test('打卡真实落库，日期唯一与用户关联列类型匹配', async () => {
       assert.equal((await fetch(base + '/api/me/checkins')).status, 401);
       await request('/api/me/checkins', { date: '2020-01-01' }, 400);
       const rows = await Promise.all(
@@ -355,9 +355,9 @@ test(
       await request('/api/me/avatar', { image: 'not-an-image' }, 400);
     });
     let note;
-    await t.test('收藏、最近学习、私有笔记、讨论、投币与关注真正落库', async () => {
+    await t.test('收藏、最近学习、私有笔记、讨论与关注真正落库', async () => {
       assert.equal((await request('/api/courses/39/favorite', {})).active, true);
-      assert.equal((await request('/api/courses/39/coin', {})).active, true);
+      await request('/api/courses/39/coin', {}, 404);
       assert.equal((await request('/api/courses/39/follow', {})).active, true);
       await request('/api/courses/39/visit', { chapterId: 390001 });
       await request('/api/courses/39/visit', { chapterId: 390001 });
@@ -379,7 +379,7 @@ test(
         (await request('/api/courses/39')).comments.some((c) => c.content === 'MySQL 中文讨论'),
       );
     });
-    await t.test('播放事务、并发切换收藏、直播预约及外键拒绝无效数据', async () => {
+    await t.test('播放事务、并发切换收藏、历史预约及接口拒绝无效关联', async () => {
       await request('/api/courses/4/progress', { chapterId: 1, currentTime: 25, duration: 100 });
       await request('/api/courses/4/progress', { chapterId: 1, currentTime: 10, duration: 100 });
       assert.equal((await request('/api/courses/4')).chapters[0].playback.percent, 25);
@@ -395,12 +395,15 @@ test(
       await request('/api/lives/10/reservation', {});
       await request('/api/lives/10/reservation', {});
       assert.equal((await request('/api/lives'))[0].reserved, true);
-      await assert.rejects(
-        connection.query(
-          "INSERT INTO notes(user_id,course_id,chapter_id,at_second,content) VALUES(999999,39,390001,0,'invalid')",
-        ),
-        { code: 'ER_NO_REFERENCED_ROW_2' },
+      await request(
+        '/api/courses/39/notes',
+        { chapterId: 170001, atSecond: 0, content: 'invalid chapter' },
+        400,
       );
+      const [[fks]] = await connection.query(
+        'SELECT COUNT(*) AS n FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE()',
+      );
+      assert.equal(fks.n, 0);
     });
     await t.test('服务重启后会话、收藏和笔记保留，删除笔记有归属校验', async () => {
       await stop(server);
@@ -495,7 +498,7 @@ test(
           (await request('/api/courses/' + id)).chapters.every((c) => c.embed_url.includes(bvid)),
         );
     });
-    await t.test('正式后台真实 MySQL 权限审计与并发昵称唯一', async () => {
+    await t.test('正式后台真实 MySQL 权限、单会话与并发昵称唯一', async () => {
       await checkAdminApi(base, (uid) =>
         connection.query('INSERT INTO admin_accounts(user_id) VALUES(?)', [uid]),
       );

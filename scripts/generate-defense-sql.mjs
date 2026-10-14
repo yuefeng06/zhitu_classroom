@@ -42,7 +42,8 @@ const reasons = {
   follows: '同一用户不能重复关注同名讲师；当前没有讲师实体，teacher 不是讲师外键。',
   reservations: '历史上每个用户对同一直播最多一条预约，当前页面不再使用预约功能。',
   account_status: 'user_id 同时是主键和外键：每个已有用户最多一条状态记录，不要求人人都有记录。',
-  admin_accounts: 'user_id 同时是主键和外键：管理员必须是已有用户，一个用户最多一条管理员身份。',
+  admin_accounts:
+    'user_id 是主键并逻辑关联 users.id：每个用户最多一条管理员身份；授权脚本验证用户存在。',
   history_resets: '每个已有用户最多保留一个最近清除时间，重复清除更新同一行。',
   comment_moderation: 'comment_id 同时是主键和外键：每条已有评论最多一份当前审核状态。',
 };
@@ -60,10 +61,12 @@ const extra = {
     '它是联合唯一索引，不是联合主键；本表主键只有 id。',
   ],
   notes: [
-    '三个独立外键只保证用户、课程和章节存在；章节属于该课程仍由接口校验。',
-    '外键不代替权限校验；能否读写笔记由服务端会话及用户归属判断。',
+    '用户、课程和章节均为逻辑关联；接口校验存在性以及章节所属课程。',
+    '私有笔记的读写权限由服务端会话及用户归属判断。',
   ],
-  progress: ['chapter_id 可空，才允许 ON DELETE SET NULL；章节被删时可保留课程进度行。'],
+  progress: [
+    'chapter_id 可空且逻辑关联章节；已移除 ON DELETE SET NULL，直接删除章节不会自动清理关联。',
+  ],
   course_visits: ['章节与课程是否匹配仍需接口校验；访问记录不等于播放完成度。'],
   study_checkins: ['唯一约束只限制重复日期；日期采用服务器北京时间、禁止补签由接口负责。'],
   sessions: [
@@ -75,7 +78,7 @@ const extra = {
     'actor_id 外键只证明用户存在；是否有管理员权限由管理接口校验。',
     'target_id 可指向课程、文章、评论或用户，不是一个固定父表，因此当前没有单表外键。',
   ],
-  admin_articles: ['没有作者外键或分类外键，不虚构当前结构；管理员操作另由审计表追踪。'],
+  admin_articles: ['文章写入检查管理员权限与行版本；本轮已移除管理审计表，不再保留操作流水。'],
 };
 const header = [
   '-- 知途课堂：数据库表结构答辩讲解版（MySQL 8.0）',
@@ -90,10 +93,10 @@ const header = [
   '-- 联合主键：一个主键由多列组成，组合唯一，不要求每列单独唯一。',
   '-- FOREIGN KEY：约束非NULL引用值必须存在于父表；不代替身份权限和全部业务规则。',
   '-- UNIQUE KEY：约束候选业务值不重复；本项目昵称和章节顺序均非NULL。',
-  '-- 普通 KEY：辅助查询和关联，不限制重复；实际是否使用需看执行计划。',
+  '-- 普通 KEY：辅助查询和逻辑关联，不限制重复；名称含 fk_ 也不表示存在外键。',
   '-- AUTO_INCREMENT：生成编号，可有间隙；主键并不必须自增。',
-  '-- InnoDB 外键整数列应与父列匹配大小和符号；保留已有 signed/unsigned 差异。',
-  '-- 下架或停用是 UPDATE 状态，不触发 ON DELETE；删除规则只在实际删除时参与。',
+  '-- 本轮已移除所有物理外键，关联列和查询索引仍保留。',
+  '-- 直接 SQL 不再有外键保护；后台仅下架课程或停用账号，接口负责存在性与归属校验。',
   '--',
 ];
 let table = null,
@@ -122,11 +125,13 @@ for (const line of source.split(/\r?\n/)) {
     out.push(
       '  -- 唯一索引：' +
         (table === 'users'
-          ? '阻止同名账号并发重复注册，应用预检查不能替代此约束。'
+          ? line.includes('session_token_hash')
+            ? '当前会话摘要唯一；NULL 表示未登录，允许多个用户同时为 NULL。'
+            : '阻止同名账号并发重复注册，应用预检查不能替代此约束。'
           : '同一课程内章节顺序唯一，不同课程可以采用相同顺序号。'),
     );
   if (table && /^  KEY /.test(line))
-    out.push('  -- 普通索引：辅助相关列的查询或外键检查；不会禁止这些列出现重复值。');
+    out.push('  -- 普通索引：辅助相关列的查询；不会禁止这些列出现重复值。');
   const constraint = table && line.match(/^  CONSTRAINT `([^`]+)` FOREIGN KEY/);
   if (constraint) {
     const fk = snapshot.foreignKeys.find(

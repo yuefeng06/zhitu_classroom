@@ -260,14 +260,15 @@ test('前后端接口与持久化完整流程', async (t) => {
     await start();
     assert.equal((await request('/api/me/checkins')).total, 1);
   });
-  await t.test('收藏、投币、关注、评论、弹幕、学习和预约', async () => {
-    for (const action of ['favorite', 'coin', 'follow'])
+  await t.test('收藏、关注、评论、弹幕、学习和预约', async () => {
+    for (const action of ['favorite', 'follow'])
       assert.equal((await request('/api/courses/4/' + action, {})).active, true);
     await request('/api/courses/4/comments', { content: '联调评论 <script>example</script>' });
     await request('/api/courses/4/danmaku', { content: '联调弹幕' });
     const detail = await request('/api/courses/4');
     assert.equal(detail.course.favorite, true);
-    assert.equal(detail.course.coin, true);
+    assert.equal('coin' in detail.course, false);
+    await request('/api/courses/39/coin', {}, 404);
     assert.equal(detail.followed, true);
     assert.ok(detail.comments.some((c) => c.content.includes('联调评论')));
     assert.ok(detail.danmaku.some((c) => c.content === '联调弹幕'));
@@ -518,7 +519,7 @@ test('前后端接口与持久化完整流程', async (t) => {
     await request('/api/courses/17/visit', { chapterId: 170001 });
     assert.equal((await request('/api/me/courses')).learning[0].id, 17);
   });
-  await t.test('正式后台权限、课程文章审核、审计及并发注册', async () => {
+  await t.test('正式后台权限、课程文章审核、单会话及并发注册', async () => {
     await checkAdminApi(base, async (uid) => {
       const fixture = new DatabaseSync(database);
       fixture.prepare('INSERT INTO admin_accounts(user_id) VALUES(?)').run(uid);

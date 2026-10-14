@@ -1,15 +1,8 @@
 {
   "database_name": "zhitu_classroom",
   "version": "8.0.30",
-  "captured": "2026-10-09T00:46:01.286Z",
+  "captured": "2026-10-14T10:52:05.133Z",
   "tables": [
-    {
-      "TABLE_NAME": "account_status",
-      "TABLE_TYPE": "BASE TABLE",
-      "ENGINE": "InnoDB",
-      "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
-      "TABLE_COMMENT": ""
-    },
     {
       "TABLE_NAME": "admin_accounts",
       "TABLE_TYPE": "BASE TABLE",
@@ -19,13 +12,6 @@
     },
     {
       "TABLE_NAME": "admin_articles",
-      "TABLE_TYPE": "BASE TABLE",
-      "ENGINE": "InnoDB",
-      "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
-      "TABLE_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "admin_audit",
       "TABLE_TYPE": "BASE TABLE",
       "ENGINE": "InnoDB",
       "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
@@ -44,20 +30,6 @@
       "ENGINE": "InnoDB",
       "TABLE_COLLATION": "utf8mb4_unicode_ci",
       "TABLE_COMMENT": "课程章节表"
-    },
-    {
-      "TABLE_NAME": "coins",
-      "TABLE_TYPE": "BASE TABLE",
-      "ENGINE": "InnoDB",
-      "TABLE_COLLATION": "utf8mb4_unicode_ci",
-      "TABLE_COMMENT": "课程投币表"
-    },
-    {
-      "TABLE_NAME": "comment_moderation",
-      "TABLE_TYPE": "BASE TABLE",
-      "ENGINE": "InnoDB",
-      "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
-      "TABLE_COMMENT": ""
     },
     {
       "TABLE_NAME": "comments",
@@ -137,13 +109,6 @@
       "TABLE_COMMENT": "直播预约"
     },
     {
-      "TABLE_NAME": "sessions",
-      "TABLE_TYPE": "BASE TABLE",
-      "ENGINE": "InnoDB",
-      "TABLE_COLLATION": "utf8mb4_unicode_ci",
-      "TABLE_COMMENT": "登录会话"
-    },
-    {
       "TABLE_NAME": "study_checkins",
       "TABLE_TYPE": "BASE TABLE",
       "ENGINE": "InnoDB",
@@ -166,34 +131,6 @@
     }
   ],
   "columns": [
-    {
-      "TABLE_NAME": "account_status",
-      "COLUMN_NAME": "user_id",
-      "ORDINAL_POSITION": 1,
-      "COLUMN_TYPE": "bigint unsigned",
-      "DATA_TYPE": "bigint",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": null,
-      "EXTRA": "",
-      "COLUMN_KEY": "PRI",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "account_status",
-      "COLUMN_NAME": "disabled",
-      "ORDINAL_POSITION": 2,
-      "COLUMN_TYPE": "bigint",
-      "DATA_TYPE": "bigint",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": "0",
-      "EXTRA": "",
-      "COLUMN_KEY": "",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
     {
       "TABLE_NAME": "admin_accounts",
       "COLUMN_NAME": "user_id",
@@ -310,76 +247,6 @@
       "TABLE_NAME": "admin_articles",
       "COLUMN_NAME": "updated_at",
       "ORDINAL_POSITION": 7,
-      "COLUMN_TYPE": "datetime(3)",
-      "DATA_TYPE": "datetime",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP(3)",
-      "EXTRA": "DEFAULT_GENERATED",
-      "COLUMN_KEY": "",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "admin_audit",
-      "COLUMN_NAME": "id",
-      "ORDINAL_POSITION": 1,
-      "COLUMN_TYPE": "bigint",
-      "DATA_TYPE": "bigint",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": null,
-      "EXTRA": "auto_increment",
-      "COLUMN_KEY": "PRI",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "admin_audit",
-      "COLUMN_NAME": "actor_id",
-      "ORDINAL_POSITION": 2,
-      "COLUMN_TYPE": "bigint unsigned",
-      "DATA_TYPE": "bigint",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": null,
-      "EXTRA": "",
-      "COLUMN_KEY": "MUL",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "admin_audit",
-      "COLUMN_NAME": "action",
-      "ORDINAL_POSITION": 3,
-      "COLUMN_TYPE": "varchar(80)",
-      "DATA_TYPE": "varchar",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": null,
-      "EXTRA": "",
-      "COLUMN_KEY": "",
-      "CHARACTER_SET_NAME": "utf8mb4",
-      "COLLATION_NAME": "utf8mb4_0900_ai_ci",
-      "COLUMN_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "admin_audit",
-      "COLUMN_NAME": "target_id",
-      "ORDINAL_POSITION": 4,
-      "COLUMN_TYPE": "bigint",
-      "DATA_TYPE": "bigint",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": null,
-      "EXTRA": "",
-      "COLUMN_KEY": "",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "admin_audit",
-      "COLUMN_NAME": "created_at",
-      "ORDINAL_POSITION": 5,
       "COLUMN_TYPE": "datetime(3)",
       "DATA_TYPE": "datetime",
       "IS_NULLABLE": "NO",
@@ -545,76 +412,6 @@
       "COLUMN_COMMENT": ""
     },
     {
-      "TABLE_NAME": "coins",
-      "COLUMN_NAME": "user_id",
-      "ORDINAL_POSITION": 1,
-      "COLUMN_TYPE": "bigint unsigned",
-      "DATA_TYPE": "bigint",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": null,
-      "EXTRA": "",
-      "COLUMN_KEY": "PRI",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "coins",
-      "COLUMN_NAME": "course_id",
-      "ORDINAL_POSITION": 2,
-      "COLUMN_TYPE": "bigint unsigned",
-      "DATA_TYPE": "bigint",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": null,
-      "EXTRA": "",
-      "COLUMN_KEY": "PRI",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "coins",
-      "COLUMN_NAME": "created_at",
-      "ORDINAL_POSITION": 3,
-      "COLUMN_TYPE": "datetime",
-      "DATA_TYPE": "datetime",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
-      "EXTRA": "DEFAULT_GENERATED",
-      "COLUMN_KEY": "",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "comment_moderation",
-      "COLUMN_NAME": "comment_id",
-      "ORDINAL_POSITION": 1,
-      "COLUMN_TYPE": "bigint unsigned",
-      "DATA_TYPE": "bigint",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": null,
-      "EXTRA": "",
-      "COLUMN_KEY": "PRI",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "comment_moderation",
-      "COLUMN_NAME": "hidden",
-      "ORDINAL_POSITION": 2,
-      "COLUMN_TYPE": "bigint",
-      "DATA_TYPE": "bigint",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": "0",
-      "EXTRA": "",
-      "COLUMN_KEY": "",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
-    {
       "TABLE_NAME": "comments",
       "COLUMN_NAME": "id",
       "ORDINAL_POSITION": 1,
@@ -693,6 +490,20 @@
       "IS_NULLABLE": "NO",
       "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
       "EXTRA": "DEFAULT_GENERATED",
+      "COLUMN_KEY": "",
+      "CHARACTER_SET_NAME": null,
+      "COLLATION_NAME": null,
+      "COLUMN_COMMENT": ""
+    },
+    {
+      "TABLE_NAME": "comments",
+      "COLUMN_NAME": "hidden",
+      "ORDINAL_POSITION": 7,
+      "COLUMN_TYPE": "bigint",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "EXTRA": "",
       "COLUMN_KEY": "",
       "CHARACTER_SET_NAME": null,
       "COLLATION_NAME": null,
@@ -1427,48 +1238,6 @@
       "COLUMN_COMMENT": ""
     },
     {
-      "TABLE_NAME": "sessions",
-      "COLUMN_NAME": "token",
-      "ORDINAL_POSITION": 1,
-      "COLUMN_TYPE": "varchar(128)",
-      "DATA_TYPE": "varchar",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": null,
-      "EXTRA": "",
-      "COLUMN_KEY": "PRI",
-      "CHARACTER_SET_NAME": "ascii",
-      "COLLATION_NAME": "ascii_bin",
-      "COLUMN_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "sessions",
-      "COLUMN_NAME": "user_id",
-      "ORDINAL_POSITION": 2,
-      "COLUMN_TYPE": "bigint unsigned",
-      "DATA_TYPE": "bigint",
-      "IS_NULLABLE": "YES",
-      "COLUMN_DEFAULT": null,
-      "EXTRA": "",
-      "COLUMN_KEY": "MUL",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "sessions",
-      "COLUMN_NAME": "expires",
-      "ORDINAL_POSITION": 3,
-      "COLUMN_TYPE": "bigint",
-      "DATA_TYPE": "bigint",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": null,
-      "EXTRA": "",
-      "COLUMN_KEY": "",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
-    {
       "TABLE_NAME": "study_checkins",
       "COLUMN_NAME": "user_id",
       "ORDINAL_POSITION": 1,
@@ -1595,6 +1364,48 @@
       "COLUMN_COMMENT": ""
     },
     {
+      "TABLE_NAME": "users",
+      "COLUMN_NAME": "disabled",
+      "ORDINAL_POSITION": 7,
+      "COLUMN_TYPE": "bigint",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "EXTRA": "",
+      "COLUMN_KEY": "",
+      "CHARACTER_SET_NAME": null,
+      "COLLATION_NAME": null,
+      "COLUMN_COMMENT": ""
+    },
+    {
+      "TABLE_NAME": "users",
+      "COLUMN_NAME": "session_token_hash",
+      "ORDINAL_POSITION": 8,
+      "COLUMN_TYPE": "char(64)",
+      "DATA_TYPE": "char",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "EXTRA": "",
+      "COLUMN_KEY": "UNI",
+      "CHARACTER_SET_NAME": "ascii",
+      "COLLATION_NAME": "ascii_bin",
+      "COLUMN_COMMENT": ""
+    },
+    {
+      "TABLE_NAME": "users",
+      "COLUMN_NAME": "session_expires",
+      "ORDINAL_POSITION": 9,
+      "COLUMN_TYPE": "bigint",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "EXTRA": "",
+      "COLUMN_KEY": "",
+      "CHARACTER_SET_NAME": null,
+      "COLLATION_NAME": null,
+      "COLUMN_COMMENT": ""
+    },
+    {
       "TABLE_NAME": "v_course_comment_stats",
       "COLUMN_NAME": "课程",
       "ORDINAL_POSITION": 1,
@@ -1625,15 +1436,6 @@
   ],
   "indexes": [
     {
-      "TABLE_NAME": "account_status",
-      "INDEX_NAME": "PRIMARY",
-      "NON_UNIQUE": 0,
-      "SEQ_IN_INDEX": 1,
-      "COLUMN_NAME": "user_id",
-      "SUB_PART": null,
-      "INDEX_TYPE": "BTREE"
-    },
-    {
       "TABLE_NAME": "admin_accounts",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": 0,
@@ -1644,24 +1446,6 @@
     },
     {
       "TABLE_NAME": "admin_articles",
-      "INDEX_NAME": "PRIMARY",
-      "NON_UNIQUE": 0,
-      "SEQ_IN_INDEX": 1,
-      "COLUMN_NAME": "id",
-      "SUB_PART": null,
-      "INDEX_TYPE": "BTREE"
-    },
-    {
-      "TABLE_NAME": "admin_audit",
-      "INDEX_NAME": "fk_admin_audit_actor",
-      "NON_UNIQUE": 1,
-      "SEQ_IN_INDEX": 1,
-      "COLUMN_NAME": "actor_id",
-      "SUB_PART": null,
-      "INDEX_TYPE": "BTREE"
-    },
-    {
-      "TABLE_NAME": "admin_audit",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": 0,
       "SEQ_IN_INDEX": 1,
@@ -1720,42 +1504,6 @@
       "NON_UNIQUE": 0,
       "SEQ_IN_INDEX": 2,
       "COLUMN_NAME": "position",
-      "SUB_PART": null,
-      "INDEX_TYPE": "BTREE"
-    },
-    {
-      "TABLE_NAME": "coins",
-      "INDEX_NAME": "fk_coin_course",
-      "NON_UNIQUE": 1,
-      "SEQ_IN_INDEX": 1,
-      "COLUMN_NAME": "course_id",
-      "SUB_PART": null,
-      "INDEX_TYPE": "BTREE"
-    },
-    {
-      "TABLE_NAME": "coins",
-      "INDEX_NAME": "PRIMARY",
-      "NON_UNIQUE": 0,
-      "SEQ_IN_INDEX": 1,
-      "COLUMN_NAME": "user_id",
-      "SUB_PART": null,
-      "INDEX_TYPE": "BTREE"
-    },
-    {
-      "TABLE_NAME": "coins",
-      "INDEX_NAME": "PRIMARY",
-      "NON_UNIQUE": 0,
-      "SEQ_IN_INDEX": 2,
-      "COLUMN_NAME": "course_id",
-      "SUB_PART": null,
-      "INDEX_TYPE": "BTREE"
-    },
-    {
-      "TABLE_NAME": "comment_moderation",
-      "INDEX_NAME": "PRIMARY",
-      "NON_UNIQUE": 0,
-      "SEQ_IN_INDEX": 1,
-      "COLUMN_NAME": "comment_id",
       "SUB_PART": null,
       "INDEX_TYPE": "BTREE"
     },
@@ -2048,24 +1796,6 @@
       "INDEX_TYPE": "BTREE"
     },
     {
-      "TABLE_NAME": "sessions",
-      "INDEX_NAME": "fk_sessions_user_id",
-      "NON_UNIQUE": 1,
-      "SEQ_IN_INDEX": 1,
-      "COLUMN_NAME": "user_id",
-      "SUB_PART": null,
-      "INDEX_TYPE": "BTREE"
-    },
-    {
-      "TABLE_NAME": "sessions",
-      "INDEX_NAME": "PRIMARY",
-      "NON_UNIQUE": 0,
-      "SEQ_IN_INDEX": 1,
-      "COLUMN_NAME": "token",
-      "SUB_PART": null,
-      "INDEX_TYPE": "BTREE"
-    },
-    {
       "TABLE_NAME": "study_checkins",
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": 0,
@@ -2100,280 +1830,18 @@
       "COLUMN_NAME": "nickname",
       "SUB_PART": null,
       "INDEX_TYPE": "BTREE"
+    },
+    {
+      "TABLE_NAME": "users",
+      "INDEX_NAME": "uq_users_session_token_hash",
+      "NON_UNIQUE": 0,
+      "SEQ_IN_INDEX": 1,
+      "COLUMN_NAME": "session_token_hash",
+      "SUB_PART": null,
+      "INDEX_TYPE": "BTREE"
     }
   ],
-  "foreignKeys": [
-    {
-      "TABLE_NAME": "account_status",
-      "CONSTRAINT_NAME": "fk_account_status_user",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "admin_accounts",
-      "CONSTRAINT_NAME": "fk_admin_accounts_user",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "admin_audit",
-      "CONSTRAINT_NAME": "fk_admin_audit_actor",
-      "COLUMN_NAME": "actor_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "chapter_playback",
-      "CONSTRAINT_NAME": "fk_chapter_playback_chapter_id",
-      "COLUMN_NAME": "chapter_id",
-      "REFERENCED_TABLE_NAME": "chapters",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "chapter_playback",
-      "CONSTRAINT_NAME": "fk_chapter_playback_user_id",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "chapters",
-      "CONSTRAINT_NAME": "fk_chapter_course",
-      "COLUMN_NAME": "course_id",
-      "REFERENCED_TABLE_NAME": "courses",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "CASCADE"
-    },
-    {
-      "TABLE_NAME": "coins",
-      "CONSTRAINT_NAME": "fk_coin_course",
-      "COLUMN_NAME": "course_id",
-      "REFERENCED_TABLE_NAME": "courses",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "CASCADE"
-    },
-    {
-      "TABLE_NAME": "coins",
-      "CONSTRAINT_NAME": "fk_coin_user",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "CASCADE"
-    },
-    {
-      "TABLE_NAME": "comment_moderation",
-      "CONSTRAINT_NAME": "fk_comment_moderation_comment",
-      "COLUMN_NAME": "comment_id",
-      "REFERENCED_TABLE_NAME": "comments",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "comments",
-      "CONSTRAINT_NAME": "fk_comment_course",
-      "COLUMN_NAME": "course_id",
-      "REFERENCED_TABLE_NAME": "courses",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "CASCADE"
-    },
-    {
-      "TABLE_NAME": "comments",
-      "CONSTRAINT_NAME": "fk_comment_user",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "CASCADE"
-    },
-    {
-      "TABLE_NAME": "course_visits",
-      "CONSTRAINT_NAME": "fk_course_visits_chapter_id",
-      "COLUMN_NAME": "chapter_id",
-      "REFERENCED_TABLE_NAME": "chapters",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "course_visits",
-      "CONSTRAINT_NAME": "fk_course_visits_course_id",
-      "COLUMN_NAME": "course_id",
-      "REFERENCED_TABLE_NAME": "courses",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "course_visits",
-      "CONSTRAINT_NAME": "fk_course_visits_user_id",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "danmaku",
-      "CONSTRAINT_NAME": "fk_danmaku_chapter_id",
-      "COLUMN_NAME": "chapter_id",
-      "REFERENCED_TABLE_NAME": "chapters",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "danmaku",
-      "CONSTRAINT_NAME": "fk_danmaku_course",
-      "COLUMN_NAME": "course_id",
-      "REFERENCED_TABLE_NAME": "courses",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "CASCADE"
-    },
-    {
-      "TABLE_NAME": "favorites",
-      "CONSTRAINT_NAME": "fk_favorite_course",
-      "COLUMN_NAME": "course_id",
-      "REFERENCED_TABLE_NAME": "courses",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "CASCADE"
-    },
-    {
-      "TABLE_NAME": "favorites",
-      "CONSTRAINT_NAME": "fk_favorite_user",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "CASCADE"
-    },
-    {
-      "TABLE_NAME": "follows",
-      "CONSTRAINT_NAME": "fk_follow_user",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "CASCADE"
-    },
-    {
-      "TABLE_NAME": "history_resets",
-      "CONSTRAINT_NAME": "fk_history_resets_user_id",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "notes",
-      "CONSTRAINT_NAME": "fk_notes_chapter_id",
-      "COLUMN_NAME": "chapter_id",
-      "REFERENCED_TABLE_NAME": "chapters",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "notes",
-      "CONSTRAINT_NAME": "fk_notes_course_id",
-      "COLUMN_NAME": "course_id",
-      "REFERENCED_TABLE_NAME": "courses",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "notes",
-      "CONSTRAINT_NAME": "fk_notes_user_id",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "progress",
-      "CONSTRAINT_NAME": "fk_progress_chapter",
-      "COLUMN_NAME": "chapter_id",
-      "REFERENCED_TABLE_NAME": "chapters",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "SET NULL"
-    },
-    {
-      "TABLE_NAME": "progress",
-      "CONSTRAINT_NAME": "fk_progress_course",
-      "COLUMN_NAME": "course_id",
-      "REFERENCED_TABLE_NAME": "courses",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "CASCADE"
-    },
-    {
-      "TABLE_NAME": "progress",
-      "CONSTRAINT_NAME": "fk_progress_user",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "CASCADE"
-    },
-    {
-      "TABLE_NAME": "reservations",
-      "CONSTRAINT_NAME": "fk_reservations_live_id",
-      "COLUMN_NAME": "live_id",
-      "REFERENCED_TABLE_NAME": "live_events",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "reservations",
-      "CONSTRAINT_NAME": "fk_reservations_user_id",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "sessions",
-      "CONSTRAINT_NAME": "fk_sessions_user_id",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    },
-    {
-      "TABLE_NAME": "study_checkins",
-      "CONSTRAINT_NAME": "fk_study_checkins_user_id",
-      "COLUMN_NAME": "user_id",
-      "REFERENCED_TABLE_NAME": "users",
-      "REFERENCED_COLUMN_NAME": "id",
-      "UPDATE_RULE": "NO ACTION",
-      "DELETE_RULE": "NO ACTION"
-    }
-  ],
+  "foreignKeys": [],
   "checks": [],
   "views": [
     {

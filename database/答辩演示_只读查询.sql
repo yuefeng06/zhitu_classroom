@@ -19,7 +19,7 @@ SHOW INDEX
 FROM
   `users`;
 
--- 3. 一对多：课程主键被章节 course_id 外键引用。
+-- 3. 一对多：章节 course_id 逻辑关联课程主键，当前没有物理外键。
 -- 章节的主键是 id；(course_id, position) 是联合唯一索引，二者不要混淆。
 SHOW CREATE TABLE `courses`;
 
@@ -33,8 +33,8 @@ SHOW CREATE TABLE `favorites`;
 -- “今天”由服务器计算，不是由联合主键本身判断。
 SHOW CREATE TABLE `study_checkins`;
 
--- 6. 一个字段兼任主键与外键：已有用户最多有一条管理员身份。
--- 外键只保证用户存在；管理员接口仍需验证会话和权限。
+-- 6. 主键与逻辑关联：已有用户最多有一条管理员身份。
+-- 授权脚本校验用户存在；管理员接口验证会话和权限。
 SHOW CREATE TABLE `admin_accounts`;
 
 -- 7. 删除规则：笔记的 NO ACTION；进度的 chapter_id 使用 SET NULL。
@@ -108,7 +108,7 @@ ORDER BY
   TABLE_NAME,
   INDEX_NAME;
 
--- 11. 查看全部外键的子表、父表、引用字段，以及删除/更新规则。
+-- 11. 核对物理外键已全部移除：下面查询预期返回 0 行。
 SELECT
   k.TABLE_NAME AS `子表`,
   k.COLUMN_NAME AS `外键字段`,

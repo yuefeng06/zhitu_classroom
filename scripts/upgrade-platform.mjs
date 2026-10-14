@@ -5,13 +5,7 @@ import { mysqlOptions } from '../config.mjs';
 import { schemaTables } from '../mysql-schema.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-const names = [
-  'admin_accounts',
-  'account_status',
-  'admin_articles',
-  'comment_moderation',
-  'admin_audit',
-];
+const names = ['admin_accounts', 'admin_articles'];
 export async function upgradePlatform(connection, { apply = false, backupDir } = {}) {
   const [[duplicates]] = await connection.query(
     'SELECT COUNT(*) AS n FROM (SELECT nickname FROM users GROUP BY nickname HAVING COUNT(*)>1) d',

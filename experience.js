@@ -11,7 +11,7 @@ const dictionary = Object.fromEntries(
 注册用户|Registered users
 课程讨论|Course comments
 课程与内容维护 · 需要管理员权限|Course and content management · Administrator access required
-课程、文章和讨论的修改将保存到服务器，并记录操作审计。|Course, article and comment changes are saved on the server and audited.
+课程、文章和讨论的修改将保存到服务器。|Course, article and comment changes are saved on the server.
 清除全部历史记录？|Clear all history?
 将清除当前账号的课程访问记录，收藏、笔记和播放进度会保留。此操作无法撤销。|This clears your course visit history. Saved courses, notes and playback progress stay intact. This cannot be undone.
 确认清除|Clear history

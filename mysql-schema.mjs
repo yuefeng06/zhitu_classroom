@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { relationships } from './relationships.mjs';
 
 const source = readFileSync(new URL('./database/mysql-schema.sql', import.meta.url), 'utf8');
 export const schemaTables = [
@@ -10,9 +11,9 @@ export const schemaTables = [
     name: m[1],
     definition: m[2].trim().replace(/,$/, ''),
   })),
-  references: [...match[2].matchAll(/FOREIGN KEY \(`(\w+)`\) REFERENCES `(\w+)` \(`(\w+)`\)/g)].map(
-    (m) => ({ column: m[1], table: m[2], parent: m[3] }),
-  ),
+  references: relationships
+    .filter(([table]) => table === match[1])
+    .map(([, column, table]) => ({ column, table, parent: 'id' })),
 }));
 export const tableNames = schemaTables.map((t) => t.name);
 const identifier = (name) => '`' + name + '`';
@@ -86,6 +87,14 @@ export async function ensureSchema(connection) {
         );
     }
   for (const [table, column, definition] of [
+    ['users', 'disabled', 'BIGINT NOT NULL DEFAULT 0'],
+    [
+      'users',
+      'session_token_hash',
+      'CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL',
+    ],
+    ['users', 'session_expires', 'BIGINT NULL DEFAULT NULL'],
+    ['comments', 'hidden', 'BIGINT NOT NULL DEFAULT 0'],
     ['courses', 'published', 'BIGINT NOT NULL DEFAULT 1'],
     ['courses', 'subject', "VARCHAR(255) NOT NULL DEFAULT ''"],
     ['live_events', 'published', 'BIGINT NOT NULL DEFAULT 1'],
@@ -100,13 +109,6 @@ export async function ensureSchema(connection) {
         `ALTER TABLE ${identifier(table)} ADD COLUMN ${identifier(column)} ${definition}`,
       );
   }
-  const [fks] = await connection.query(
-    "SELECT 1 FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='danmaku' AND COLUMN_NAME='chapter_id' AND REFERENCED_TABLE_NAME='chapters'",
-  );
-  if (!fks.length)
-    await connection.query(
-      'ALTER TABLE danmaku ADD CONSTRAINT fk_danmaku_chapter_id FOREIGN KEY (chapter_id) REFERENCES chapters(id)',
-    );
   const [indexes] = await connection.query('SHOW INDEX FROM users');
   if (
     !indexes.some(
@@ -122,6 +124,10 @@ export async function ensureSchema(connection) {
     if (duplicates.n) throw Error('重复昵称阻止唯一索引升级');
     await connection.query('ALTER TABLE users ADD UNIQUE INDEX uq_users_nickname (nickname)');
   }
+  if (!indexes.some((i) => i.Key_name === 'uq_users_session_token_hash'))
+    await connection.query(
+      'ALTER TABLE users ADD UNIQUE INDEX uq_users_session_token_hash(session_token_hash)',
+    );
   await validateSchema(connection);
 }
 
@@ -130,6 +136,12 @@ export async function validateSchema(connection) {
     'SELECT TABLE_NAME AS name,COLUMN_NAME AS col FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE()',
   );
   const columns = new Set(rows.map((r) => r.name + '.' + r.col));
+  if (
+    rows.some((r) =>
+      ['coins', 'sessions', 'account_status', 'comment_moderation', 'admin_audit'].includes(r.name),
+    )
+  )
+    throw Error('数据库仍为旧结构，请先预检并执行 scripts/simplify-schema.mjs 增量迁移');
   const missing = schemaTables.flatMap((t) =>
     t.columns.filter((c) => !columns.has(t.name + '.' + c.name)).map((c) => t.name + '.' + c.name),
   );

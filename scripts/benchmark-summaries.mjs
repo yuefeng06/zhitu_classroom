@@ -12,7 +12,6 @@ try {
     course_visits:
       'user_id BIGINT,course_id BIGINT,chapter_id BIGINT,PRIMARY KEY(user_id,course_id)',
     favorites: 'user_id BIGINT,course_id BIGINT,PRIMARY KEY(user_id,course_id)',
-    coins: 'user_id BIGINT,course_id BIGINT,PRIMARY KEY(user_id,course_id)',
     chapters: 'id BIGINT PRIMARY KEY,title VARCHAR(60)',
   };
   for (const [name, ddl] of Object.entries(definitions))
@@ -22,7 +21,7 @@ try {
     count++;
     return (
       await connection.execute(
-        sql.replace(/\b(progress|course_visits|favorites|coins|chapters)\b/g, 'bench_$1'),
+        sql.replace(/\b(progress|course_visits|favorites|chapters)\b/g, 'bench_$1'),
         args,
       )
     )[0];
@@ -48,7 +47,6 @@ try {
             1,
             c.id,
           )),
-          coin: !!(await db.get('SELECT 1 FROM coins WHERE user_id=? AND course_id=?', 1, c.id)),
           progress: p?.percent || 0,
           chapter_id: v?.chapter_id || p?.chapter_id || null,
           last_opened_title: v?.title || null,

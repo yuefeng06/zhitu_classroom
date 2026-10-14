@@ -25,13 +25,12 @@ export function createAdminApi(db) {
     },
     comments: {
       table: 'comments',
-      select:
-        'SELECT c.id,c.content,c.course_id,c.user_id,c.created_at,COALESCE(m.hidden,0) AS hidden FROM comments c LEFT JOIN comment_moderation m ON m.comment_id=c.id',
+      select: 'SELECT c.id,c.content,c.course_id,c.user_id,c.created_at,c.hidden FROM comments c',
     },
     users: {
       table: 'users',
       select:
-        'SELECT u.id,u.nickname,u.created_at,COALESCE(s.disabled,0) AS disabled,CASE WHEN a.user_id IS NULL THEN 0 ELSE 1 END AS is_admin FROM users u LEFT JOIN account_status s ON s.user_id=u.id LEFT JOIN admin_accounts a ON a.user_id=u.id',
+        'SELECT u.id,u.nickname,u.created_at,u.disabled,CASE WHEN a.user_id IS NULL THEN 0 ELSE 1 END AS is_admin FROM users u LEFT JOIN admin_accounts a ON a.user_id=u.id',
     },
   };
   const one = (kind, id) =>
@@ -40,8 +39,6 @@ export function createAdminApi(db) {
         ` WHERE ${kind === 'comments' ? 'c.' : kind === 'users' ? 'u.' : ''}id=?`,
       id,
     );
-  const audit = (uid, action, id) =>
-    db.run('INSERT INTO admin_audit(actor_id,action,target_id) VALUES(?,?,?)', uid, action, id);
   const article = (b) => {
     const source = typeof b.source_url === 'string' ? b.source_url.trim() : '';
     if (source) {
@@ -99,12 +96,6 @@ export function createAdminApi(db) {
       );
       return send(counts);
     }
-    if (path === '/api/admin/audit' && method === 'GET')
-      return send(
-        await db.all(
-          'SELECT id,actor_id,action,target_id,created_at FROM admin_audit ORDER BY id DESC LIMIT 100',
-        ),
-      );
     const match = path.match(/^\/api\/admin\/(courses|articles|comments|users)(?:\/(\d+))?$/);
     if (!match) fail('管理接口不存在', 404);
     const kind = match[1],
@@ -132,7 +123,6 @@ export function createAdminApi(db) {
           ...data,
         );
         const target = Number(result.lastInsertRowid);
-        await audit(uid, 'article-create', target);
         return one(kind, target);
       });
       return send(withVersion(row), 201);
@@ -167,22 +157,17 @@ export function createAdminApi(db) {
           id,
         );
       } else if (kind === 'comments') {
-        await db.run(
-          'INSERT INTO comment_moderation(comment_id,hidden) VALUES(?,?) ON CONFLICT(comment_id) DO UPDATE SET hidden=excluded.hidden',
-          id,
-          flag(b.hidden),
-        );
+        await db.run('UPDATE comments SET hidden=? WHERE id=?', flag(b.hidden), id);
       } else {
         if (row.is_admin) fail('管理员账号不能在此停用');
         const disabled = flag(b.disabled);
-        await db.run(
-          'INSERT INTO account_status(user_id,disabled) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET disabled=excluded.disabled',
-          id,
-          disabled,
-        );
-        if (disabled) await db.run('DELETE FROM sessions WHERE user_id=?', id);
+        await db.run('UPDATE users SET disabled=? WHERE id=?', disabled, id);
+        if (disabled)
+          await db.run(
+            'UPDATE users SET session_token_hash=NULL,session_expires=NULL WHERE id=?',
+            id,
+          );
       }
-      await audit(uid, kind + '-update', id);
       return one(kind, id);
     });
     return send(withVersion(updated));

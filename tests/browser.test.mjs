@@ -1,3 +1,4 @@
+import { editorialEntries } from '../scripts/editorial-entries.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -27,10 +28,14 @@ test(
   { skip: !existsSync(edge), timeout: 120000 },
   async (t) => {
     const dir = await mkdtemp(join(tmpdir(), 'zhitu-browser-'));
+    await writeFile(join(dir, 'media.json'), JSON.stringify({ chapters: {} }));
     const server = spawn(process.execPath, ['server.mjs'], {
       env: {
         ...process.env,
         AVATAR_DIR: join(dir, 'avatars'),
+        VIDEO_DIR: join(dir, 'videos'),
+        COURSE_COVER_DIR: join(dir, 'covers'),
+        MEDIA_CONFIG_PATH: join(dir, 'media.json'),
         DB_CLIENT: 'sqlite',
         PORT: '0',
         DB_PATH: join(dir, 'test.db'),
@@ -66,6 +71,15 @@ test(
         });
       });
     const port = await listen(server.stdout, /localhost:(\d+)/);
+    const editorial = await editorialEntries();
+    const articleDb = new DatabaseSync(join(dir, 'test.db'));
+    for (const a of editorial)
+      articleDb
+        .prepare(
+          'INSERT INTO admin_articles(title,summary,content,source_url,published) VALUES(?,?,?,?,1)',
+        )
+        .run(a.title, a.summary, a.content, a.source_url);
+    articleDb.close();
     browser = spawn(
       edge,
       [
@@ -153,6 +167,63 @@ test(
       if (result.exceptionDetails) throw Error(JSON.stringify(result.exceptionDetails));
       return result.result.value;
     };
+    const checkEditorialReader = async () => {
+      await until("document.querySelectorAll('[data-article]').length===10");
+      assert.equal(
+        await evaluate(
+          "document.querySelectorAll('[data-post-topic],.post-filters,.post-bilingual-badge').length",
+        ),
+        0,
+      );
+      await evaluate("document.querySelector('.published-feature img').decode()");
+      await screenshot('database-articles');
+      await evaluate("document.querySelector('.published-feature').click()");
+      await until("document.querySelector('.published-reader')?.open");
+      assert.equal(
+        await evaluate(
+          "document.querySelectorAll('.published-body h1,.published-body h2,.published-body h3').length",
+        ),
+        41,
+      );
+      assert.equal(
+        await evaluate(
+          "document.querySelector('.published-body').textContent.includes('特别有价值的建议和改进。')",
+        ),
+        true,
+      );
+      await evaluate('document.querySelector(\'.published-body a[href="#smart-鸣谢"]\').click()');
+      assert.equal(await evaluate('location.hash'), '#/explore');
+      assert.equal(await evaluate('document.activeElement.id'), 'smart-鸣谢');
+      assert.ok(await evaluate("document.querySelector('.published-reader').scrollTop>1000"));
+      await evaluate("document.querySelector('.published-reader').scrollTop=0");
+      await screenshot('database-full-article');
+      await evaluate("document.querySelector('.published-reader button').click()");
+      for (const entry of editorial.slice(0, 9)) {
+        await evaluate(
+          'Array.from(document.querySelectorAll("[data-article]")).find(b=>b.querySelector("h3").textContent===' +
+            JSON.stringify(entry.title) +
+            ').click()',
+        );
+        await until("document.querySelector('.published-reader')?.open");
+        const content = await evaluate("document.querySelector('.published-body').textContent");
+        assert.ok(
+          content.includes('原文摘录：') &&
+            content.includes('中文译文：') &&
+            content.includes('练习建议：'),
+        );
+        assert.equal(
+          await evaluate("document.querySelector('.published-reader > a').href"),
+          entry.source_url,
+        );
+        assert.equal(
+          await evaluate(
+            "document.querySelector('.published-reader').scrollWidth<=document.querySelector('.published-reader').clientWidth",
+          ),
+          true,
+        );
+        await evaluate("document.querySelector('.published-reader button').click()");
+      }
+    };
     const screenshot = async (name) => {
       if (process.env.SCREENSHOT_DIR) {
         await new Promise((r) => setTimeout(r, 600));
@@ -184,7 +255,7 @@ test(
           ' ' +
           JSON.stringify(
             await evaluate(
-              "({route:location.hash,cards:document.querySelectorAll('.card').length,nav:document.querySelector('#primary-nav')?.className,sliders:[...document.querySelectorAll('.segment-slider')].map(e=>({x:e.getBoundingClientRect().x,transform:e.style.transform,host:e.parentElement.className,active:e.parentElement.querySelector('.on')?.getBoundingClientRect().x})),text:document.querySelector('#app')?.innerText.slice(0,180)})",
+              "({route:location.hash,cards:document.querySelectorAll('.card').length,nav:document.querySelector('#primary-nav')?.className,sliders:[...document.querySelectorAll('.segment-slider')].map(e=>({x:e.getBoundingClientRect().x,transform:e.style.transform,host:e.parentElement.className,active:e.parentElement.querySelector('.on')?.getBoundingClientRect().x})),dialogs:[...document.querySelectorAll('dialog')].map(d=>({open:d.open,text:d.innerText.slice(-400),invalid:[...d.querySelectorAll(':invalid')].map(e=>e.name)})),text:document.querySelector('#app')?.innerText.slice(0,180)})",
             ),
           ),
       );
@@ -312,6 +383,328 @@ test(
       assert.deepEqual(errors, []);
       return;
     }
+    if (process.env.FAVORITES_ONLY === '1') {
+      await evaluate(
+        "fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:'章节收藏浏览器',password:'chapter-browser-test'})}).then(r=>r.json())",
+      );
+      await call('Page.reload', {}, sessionId);
+      await until("document.querySelectorAll('.card').length===6");
+      await evaluate("location.hash='#/video/39?chapter=390001'");
+      await until("document.querySelector('.chapter.playing')?.dataset.chapter==='390001'");
+      await evaluate("document.querySelector('#favorite').click()");
+      await until("document.querySelector('#favorite')?.getAttribute('aria-pressed')==='true'");
+      await evaluate("document.querySelector('#next').click()");
+      await until("document.querySelector('.chapter.playing')?.dataset.chapter==='390002'");
+      assert.equal(
+        await evaluate("document.querySelector('#favorite').getAttribute('aria-pressed')"),
+        'false',
+      );
+      await evaluate("document.querySelector('#favorite').click()");
+      await until("document.querySelector('#favorite')?.getAttribute('aria-pressed')==='true'");
+      await evaluate("location.hash='#/favorites'");
+      await until("document.querySelectorAll('[data-favorite-chapter]').length===2");
+      const titles = await evaluate(
+        "[...document.querySelectorAll('[data-favorite-chapter] h3')].map(e=>e.textContent)",
+      );
+      assert.equal(new Set(titles).size, 2);
+      await evaluate("document.querySelector('#study-list').scrollIntoView({block:'center'})");
+      await screenshot('chapter-favorites-desktop');
+      await evaluate('document.querySelector(\'[data-favorite-chapter="390001"] .card\').click()');
+      await until("document.querySelector('.chapter.playing')?.dataset.chapter==='390001'");
+      assert.equal(
+        await evaluate("document.querySelector('#favorite').getAttribute('aria-pressed')"),
+        'true',
+      );
+      await evaluate("location.hash='#/favorites'");
+      await until("document.querySelectorAll('[data-favorite-chapter]').length===2");
+      await evaluate('document.querySelector(\'[data-shelf="390001"]\').click()');
+      await until("document.querySelectorAll('[data-favorite-chapter]').length===1");
+      assert.equal(
+        await evaluate("document.querySelector('[data-favorite-chapter]').dataset.favoriteChapter"),
+        '390002',
+      );
+      await call(
+        'Emulation.setDeviceMetricsOverride',
+        { width: 390, height: 844, deviceScaleFactor: 1, mobile: true },
+        sessionId,
+      );
+      assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'), true);
+      await evaluate("document.querySelector('#study-list').scrollIntoView({block:'center'})");
+      await screenshot('chapter-favorites-mobile');
+      assert.deepEqual(errors, []);
+      return;
+    }
+    if (process.env.LEARNING_ADMIN_ONLY === '1') {
+      const member = await evaluate(
+        `fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:'学习维护浏览器用户',password:'member-browser-pass'})}).then(r=>r.json())`,
+      );
+      await evaluate(
+        `(async()=>{for(const [url,body] of [['/api/courses/39/visit',{chapterId:390001}],['/api/courses/39/favorite',{chapterId:390001,active:true}],['/api/courses/39/follow',{active:true}],['/api/me/checkins',{}],['/api/courses/39/notes',{chapterId:390001,atSecond:3,content:'浏览器私密笔记'}],['/api/courses/39/danmaku',{chapterId:390001,content:'浏览器章节弹幕',atSecond:3}]])await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});})()`,
+      );
+      const registered = await evaluate(
+        `fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:'学习维护浏览器管理员',password:'admin-browser-pass'})}).then(r=>r.json())`,
+      );
+      const fixture = new DatabaseSync(join(dir, 'test.db'));
+      fixture.prepare('INSERT INTO admin_accounts(user_id) VALUES(?)').run(registered.user.id);
+      fixture
+        .prepare(
+          'INSERT INTO chapter_playback(user_id,chapter_id,current_time,duration,percent) VALUES(?,390001,3,60,5)',
+        )
+        .run(member.user.id);
+      fixture.close();
+      await call('Page.reload', {}, sessionId);
+      await until("document.querySelectorAll('.card').length===6");
+      await evaluate(`location.hash='#/admin/learning?userId=${member.user.id}'`);
+      await until("document.querySelectorAll('.admin-record-list article').length===1");
+      assert.equal(
+        await evaluate("document.querySelector('.admin-record-filters [name=userId]').value"),
+        String(member.user.id),
+      );
+      await screenshot('learning-admin-history-desktop');
+      await evaluate(
+        "window.confirm=()=>false;document.querySelector('[data-record-action=delete]').click()",
+      );
+      assert.equal(
+        await evaluate("document.querySelectorAll('.admin-record-list article').length"),
+        1,
+      );
+      await evaluate(
+        "window.confirm=()=>true;document.querySelector('[data-record-action=delete]').click()",
+      );
+      await until("document.querySelectorAll('.admin-record-list article').length===0");
+      await evaluate("document.querySelector('[data-record-kind=favorites]').click()");
+      await until("document.querySelectorAll('.admin-record-list article').length===1");
+      await evaluate("document.querySelector('[data-record-action=delete]').click()");
+      await until("document.querySelectorAll('.admin-record-list article').length===0");
+      await evaluate("document.querySelector('[data-record-kind=checkins]').click()");
+      await until("document.querySelectorAll('.admin-checkin-grid .checked').length===1");
+      await screenshot('learning-admin-checkins-desktop');
+      await call(
+        'Emulation.setDeviceMetricsOverride',
+        { width: 390, height: 844, deviceScaleFactor: 1, mobile: true },
+        sessionId,
+      );
+      await evaluate(
+        "document.querySelector('.admin-checkin-calendar').scrollIntoView({block:'center'})",
+      );
+      assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'), true);
+      await screenshot('learning-admin-checkins-mobile');
+      assert.equal(await evaluate('innerWidth'), 390);
+      await evaluate("document.querySelector('[data-record-action=delete]').click()");
+      await until("document.querySelectorAll('.admin-checkin-grid .checked').length===0");
+      const calendarFixture = new DatabaseSync(join(dir, 'test.db'));
+      for (let i = 1; i <= 31; i++)
+        calendarFixture
+          .prepare('INSERT INTO study_checkins(user_id,checkin_date) VALUES(?,?)')
+          .run(member.user.id, '2026-01-' + String(i).padStart(2, '0'));
+      calendarFixture.close();
+      await evaluate(
+        "(()=>{const f=document.querySelector('.admin-record-filters');f.elements.month.value='2026-01';f.requestSubmit();})()",
+      );
+      await until(
+        "document.querySelectorAll('.admin-checkin-grid .checked').length===31 && document.querySelectorAll('.admin-record-list article').length===30",
+      );
+      await evaluate("document.querySelector('[data-record-next]').click()");
+      await until(
+        "document.querySelectorAll('.admin-record-list article').length===1 && document.querySelectorAll('.admin-checkin-grid .checked').length===31",
+      );
+      for (const kind of ['playback', 'notes', 'follows']) {
+        await evaluate(`document.querySelector('[data-record-kind=${kind}]').click()`);
+        await until("document.querySelectorAll('.admin-record-list article').length===1");
+        if (kind !== 'follows')
+          assert.equal(
+            await evaluate("document.querySelectorAll('[data-record-action]').length"),
+            0,
+          );
+        assert.equal(
+          await evaluate(
+            "document.querySelector('[data-record-results]').textContent.includes('浏览器私密笔记')",
+          ),
+          false,
+        );
+      }
+      await evaluate("location.hash='#/admin/danmaku'");
+      await until(
+        "document.querySelector('.admin-record-list')?.textContent.includes('浏览器章节弹幕')",
+      );
+      await evaluate(
+        "(()=>{const f=document.querySelector('.admin-record-filters');f.elements.q.value='浏览器章节弹幕';f.requestSubmit();})()",
+      );
+      await until("document.querySelectorAll('.admin-record-list article').length===1");
+      await evaluate("document.querySelector('[data-record-action=hide]').click()");
+      await until("document.querySelector('[data-record-action=restore]')!==null");
+      assert.equal(
+        (await evaluate("fetch('/api/courses/39/danmaku?chapterId=390001').then(r=>r.json())"))
+          .length,
+        0,
+      );
+      await screenshot('learning-admin-danmaku-mobile');
+      await evaluate("document.querySelector('[data-record-action=restore]').click()");
+      await until("document.querySelector('[data-record-action=hide]')!==null");
+      await evaluate("document.querySelector('[data-record-action=delete]').click()");
+      await until("document.querySelectorAll('.admin-record-list article').length===0");
+      await evaluate("location.hash='#/admin/users'");
+      await until(`document.querySelector('[data-user-detail="${member.user.id}"]')!==null`);
+      await evaluate(`document.querySelector('[data-user-detail="${member.user.id}"]').click()`);
+      await until("document.querySelector('[data-reset-password]')!==null");
+      await evaluate(
+        "(()=>{const f=document.querySelector('[data-reset-password]');f.elements.newPassword.value='new-browser-pass';f.elements.repeatPassword.value='different';f.requestSubmit();})()",
+      );
+      await until(
+        "document.querySelector('[data-password-status]').textContent.includes('不一致')",
+      );
+      await evaluate(
+        "(()=>{const f=document.querySelector('[data-reset-password]');f.elements.repeatPassword.value='new-browser-pass';f.requestSubmit();})()",
+      );
+      await until(
+        "document.querySelector('[data-password-status]').textContent.includes('密码已重置')",
+      );
+      await evaluate(
+        "document.querySelector('[data-reset-password]').scrollIntoView({block:'center'})",
+      );
+      await screenshot('learning-admin-password-mobile');
+      assert.equal(
+        await evaluate("document.querySelector('[data-reset-password] [name=newPassword]').value"),
+        '',
+      );
+      assert.deepEqual(errors, []);
+      return;
+    }
+    if (process.env.COMMENTS_ONLY === '1') {
+      const registered = await evaluate(
+        `fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:'章节讨论浏览器',password:'comment-browser-test'})}).then(r=>r.json())`,
+      );
+      const fixture = new DatabaseSync(join(dir, 'test.db'));
+      fixture.prepare('INSERT INTO admin_accounts(user_id) VALUES(?)').run(registered.user.id);
+      fixture.close();
+      await call('Page.reload', {}, sessionId);
+      await until("document.querySelectorAll('.card').length===6");
+      await evaluate("location.hash='#/video/39?chapter=390001'");
+      await until(
+        "document.querySelector('.chapter.playing')?.dataset.chapter==='390001' && document.querySelector('#comment-status').textContent===''",
+      );
+      await evaluate(
+        "document.querySelector('#comment-input').value='第一集独立讨论';document.querySelector('#comment-form').requestSubmit(document.querySelector('#comment-form button'))",
+      );
+      await until(
+        "document.querySelector('#comments-list').textContent.includes('第一集独立讨论')",
+      );
+      await evaluate(
+        "document.querySelector('#comment-input').value='第一集草稿';document.querySelector('#next').click()",
+      );
+      await until(
+        "document.querySelector('.chapter.playing')?.dataset.chapter==='390002' && document.querySelector('#comment-status').textContent===''",
+      );
+      assert.equal(
+        await evaluate(
+          "document.querySelector('#comments-list').textContent.includes('第一集独立讨论')",
+        ),
+        false,
+      );
+      assert.equal(await evaluate("document.querySelector('#comment-input').value"), '');
+      await evaluate(
+        "document.querySelector('#comment-input').value='第二集独立讨论';document.querySelector('#comment-form').requestSubmit(document.querySelector('#comment-form button'))",
+      );
+      await until(
+        "document.querySelector('#comments-list').textContent.includes('第二集独立讨论')",
+      );
+      await evaluate("document.querySelector('#previous').click()");
+      await until(
+        "document.querySelector('.chapter.playing')?.dataset.chapter==='390001' && document.querySelector('#comments-list').textContent.includes('第一集独立讨论')",
+      );
+      assert.equal(
+        await evaluate(
+          "document.querySelector('#comments-list').textContent.includes('第二集独立讨论')",
+        ),
+        false,
+      );
+      assert.equal(await evaluate("document.querySelector('#comment-input').value"), '第一集草稿');
+      await evaluate("document.querySelector('.comments').scrollIntoView({block:'center'})");
+      await screenshot('chapter-comments-player');
+      await evaluate("location.hash='#/admin/comments'");
+      await until("document.querySelector('#admin-comment-course')?.options.length>1");
+      // Choose through the themed menu, then exercise keyboard selection for chapters.
+      await evaluate(
+        "document.querySelector('#admin-comment-course-trigger').click();document.querySelector('#admin-comment-course-option-'+[...document.querySelector('#admin-comment-course').options].findIndex(o=>o.value==='39')).click()",
+      );
+      await until(
+        "[...document.querySelector('#admin-comment-chapter').options].some(o=>o.value==='390001')",
+      );
+      await evaluate("document.querySelector('#admin-comment-chapter-trigger').focus()");
+      for (const key of ['ArrowDown', 'ArrowDown', 'ArrowDown', 'Enter']) {
+        await call('Input.dispatchKeyEvent', {
+          type: 'keyDown',
+          key,
+          code: key,
+          windowsVirtualKeyCode: key === 'Enter' ? 13 : 40,
+        });
+        await call('Input.dispatchKeyEvent', {
+          type: 'keyUp',
+          key,
+          code: key,
+          windowsVirtualKeyCode: key === 'Enter' ? 13 : 40,
+        });
+      }
+      await until(
+        "document.querySelector('#admin-comment-chapter').value==='390001' && document.querySelectorAll('.admin-comment-item').length===1",
+      );
+      assert.equal(
+        await evaluate("document.querySelector('.admin-comment-text').textContent"),
+        '第一集独立讨论',
+      );
+      assert.equal(
+        await evaluate("document.querySelectorAll('#admin-filters .select-menu').length"),
+        3,
+      );
+      await screenshot('chapter-comments-admin-desktop');
+      await evaluate('document.querySelector(\'[data-hidden="1"]\').click()');
+      await until('document.querySelector(\'[data-hidden="0"]\')?.disabled===false');
+      assert.equal(
+        (await evaluate("fetch('/api/courses/39/comments?chapterId=390001').then(r=>r.json())"))
+          .length,
+        0,
+      );
+      await evaluate('document.querySelector(\'[data-hidden="0"]\').click()');
+      await until('document.querySelector(\'[data-hidden="0"]\')?.disabled===true');
+      assert.equal(
+        (await evaluate("fetch('/api/courses/39/comments?chapterId=390001').then(r=>r.json())"))
+          .length,
+        1,
+      );
+      await call(
+        'Emulation.setDeviceMetricsOverride',
+        { width: 390, height: 844, deviceScaleFactor: 1, mobile: true },
+        sessionId,
+      );
+      assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'), true);
+      await evaluate("document.querySelector('#admin-comment-chapter-trigger').click()");
+      await screenshot('chapter-comments-admin-mobile');
+      await evaluate(
+        "document.querySelector('#admin-comment-chapter-trigger').click();window.confirm=()=>true;document.querySelector('[data-delete]').click()",
+      );
+      await until("document.querySelectorAll('.admin-comment-item').length===0");
+      assert.equal(
+        (await evaluate("fetch('/api/courses/39/comments?chapterId=390001').then(r=>r.json())"))
+          .length,
+        0,
+      );
+      await evaluate("document.querySelector('#admin-filters').reset()");
+      await until(
+        "document.querySelector('#admin-comment-course').value==='' && document.querySelectorAll('.admin-comment-item').length>1",
+      );
+      await evaluate(
+        "document.querySelector('#admin-comment-chapter-trigger').click();document.querySelector('#admin-comment-chapter-option-1').click()",
+      );
+      await until(
+        "document.querySelector('.admin-comment-list').textContent.includes('历史课程评论（未绑定章节）') && !document.querySelector('.admin-comment-list').textContent.includes('第二集独立讨论')",
+      );
+      assert.equal(
+        await evaluate("document.querySelectorAll('#admin-filters .select-menu').length"),
+        3,
+      );
+      assert.deepEqual(errors, []);
+      return;
+    }
     if (process.env.ADMIN_ONLY === '1') {
       const registered = await evaluate(
         `fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:'后台界面测试',password:'admin-test'})}).then(r=>r.json())`,
@@ -325,6 +718,80 @@ test(
       await until("document.querySelectorAll('.metric-grid article').length===4");
       await screenshot('admin-real-dashboard');
       await evaluate("location.hash='#/admin/courses'");
+      await until("document.querySelector('#admin-create')!==null");
+      await evaluate("document.querySelector('#admin-create').click()");
+      await until("document.querySelector('.admin-dialog[open]')!==null");
+      await evaluate(
+        `(()=>{const f=document.querySelector('.admin-dialog form');for(const [k,v] of Object.entries({title:'后台新增课程回归',teacher:'演示讲师',subject:'编程',description:'新增课程界面验证'}))f.elements[k].value=v;f.requestSubmit(f.querySelector('[data-open-chapters]'));})()`,
+      );
+      await until(
+        "document.querySelector('.admin-table').textContent.includes('后台新增课程回归')",
+      );
+      await until("document.querySelector('[data-new]')!==null");
+      assert.equal(
+        await evaluate(
+          "document.querySelector('.admin-chapters').textContent.includes('还没有章节')",
+        ),
+        true,
+      );
+      await evaluate("document.querySelector('[data-close]').click()");
+      await evaluate("document.querySelector('[data-cover]').click()");
+      await until("document.querySelector('[name=coverfile]')!==null");
+      await evaluate(
+        `(async()=>{const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;const ctx=canvas.getContext('2d');ctx.fillStyle='#cb416d';ctx.fillRect(0,0,320,180);const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));const dt=new DataTransfer();dt.items.add(new File([blob],'cover.png',{type:'image/png'}));document.querySelector('[name=coverfile]').files=dt.files;document.querySelector('.admin-dialog form').requestSubmit();})()`,
+      );
+      await until("document.querySelector('.admin-dialog[open]')===null");
+      await evaluate("document.querySelector('[data-edit]').click()");
+      await screenshot('admin-course-upload-entry');
+      await evaluate(
+        "(()=>{const f=document.querySelector('.admin-dialog form');f.elements.description.value='上传前保存的课程简介';f.requestSubmit(f.querySelector('[data-open-chapters]'));})()",
+      );
+      await until("document.querySelector('[data-new]')!==null");
+      assert.equal(
+        await evaluate(
+          "fetch('/api/admin/courses?q='+encodeURIComponent('后台新增课程回归')).then(r=>r.json()).then(d=>d.rows[0].description)",
+        ),
+        '上传前保存的课程简介',
+      );
+      await evaluate("document.querySelector('[data-new]').click()");
+      await evaluate(
+        "(()=>{const f=document.querySelector('.admin-dialog form');f.elements.title.value='第一节';f.elements.duration.value='12:00';f.requestSubmit();})()",
+      );
+      await until("document.querySelector('#admin-video-file')!==null");
+      await until("document.querySelector('.admin-dialog [name=bvid]')!==null");
+      await screenshot('admin-source-editor');
+      // Produce a real browser-decodable video; API header fixtures alone cannot prove playback.
+      await evaluate(`(async()=>{
+        const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;
+        const ctx=canvas.getContext('2d');const stream=canvas.captureStream(10);
+        const recorder=new MediaRecorder(stream,{mimeType:'video/webm'});const chunks=[];
+        recorder.ondataavailable=e=>chunks.push(e.data);
+        const done=new Promise(resolve=>recorder.onstop=resolve);
+        recorder.start();let n=0;const tick=setInterval(()=>{ctx.fillStyle='#cb416d';ctx.fillRect(0,0,320,180);ctx.fillStyle='white';ctx.font='22px sans-serif';ctx.fillText('Upload playback '+n++,35,95);},100);
+        await new Promise(r=>setTimeout(r,1200));recorder.stop();await done;clearInterval(tick);stream.getTracks().forEach(t=>t.stop());
+        const dt=new DataTransfer();dt.items.add(new File(chunks,'lesson.webm',{type:'video/webm'}));
+        document.querySelector('#admin-video-file').files=dt.files;document.querySelector('#admin-video-upload').click();
+      })()`);
+      await until(
+        "document.querySelector('#admin-upload-status')?.textContent.includes('上传成功')",
+      );
+      assert.equal(await evaluate("document.querySelector('[name=kind]').value"), 'local');
+      await screenshot('admin-video-uploaded');
+      await evaluate("document.querySelector('.admin-dialog').close()");
+      const newCourseId = await evaluate(`(async()=>{
+        const data=await fetch('/api/admin/courses?q='+encodeURIComponent('后台新增课程回归')).then(r=>r.json());const c=data.rows[0];
+        const r=await fetch('/api/admin/courses/'+c.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({...c,published:1})});
+        if(!r.ok)throw Error(await r.text());return c.id;
+      })()`);
+      await evaluate(`location.hash='#/video/${newCourseId}'`);
+      await until("document.querySelector('#course-video')?.readyState>=2");
+      assert.equal(await evaluate("document.querySelector('#course-video').videoWidth"), 320);
+      await evaluate(
+        "(()=>{const v=document.querySelector('#course-video');v.muted=true;return v.play();})()",
+      );
+      await until("document.querySelector('#course-video')?.currentTime>0");
+      await screenshot('uploaded-video-playing');
+      await evaluate("location.hash='#/admin/courses'");
       await until('document.querySelector(\'[data-edit="17"]\')!==null');
       await evaluate('document.querySelector(\'[data-edit="17"]\').click()');
       await until("document.querySelector('.admin-dialog[open]')!==null");
@@ -335,7 +802,7 @@ test(
         "document.querySelector('.admin-table').textContent.includes('物理界面编辑测试')",
       );
       await evaluate("location.hash='#/admin/articles'");
-      await until("document.querySelector('#admin-create')!==null");
+      await until("document.querySelector('.admin-heading h1')?.textContent==='文章管理'");
       await evaluate("document.querySelector('#admin-create').click()");
       await evaluate(
         `document.querySelector('[name=title]').value='原创学习随笔';document.querySelector('[name=summary]').value='接口与页面一起验证';document.querySelector('[name=content]').value='<script>window.unsafe=true</script>这是纯文本';document.querySelector('[name=published]').value='1';document.querySelector('.admin-dialog form').requestSubmit()`,
@@ -368,6 +835,103 @@ test(
         await evaluate('document.querySelector(\'a[href="#/admin/audit"]\')===null'),
         true,
       );
+      const detailUser = await evaluate(
+        `fetch('/api/admin/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:'用户详情回归',password:'detail-test-123'})}).then(r=>r.json())`,
+      );
+      const userFixture = new DatabaseSync(join(dir, 'test.db'));
+      const firstChapter = userFixture
+        .prepare('SELECT id FROM chapters WHERE course_id=17 ORDER BY position,id LIMIT 1')
+        .get();
+      userFixture
+        .prepare(
+          'INSERT INTO notes(user_id,course_id,chapter_id,at_second,content) VALUES(?,17,?,10,?)',
+        )
+        .run(detailUser.id, firstChapter.id, '后台不应显示的笔记内容');
+      userFixture
+        .prepare('INSERT INTO follows(user_id,teacher) SELECT ?,teacher FROM courses WHERE id=17')
+        .run(detailUser.id);
+      userFixture
+        .prepare(
+          'INSERT INTO favorites(user_id,chapter_id,created_at) VALUES(?,?,CURRENT_TIMESTAMP)',
+        )
+        .run(detailUser.id, firstChapter.id);
+      userFixture.close();
+      await call(
+        'Emulation.setDeviceMetricsOverride',
+        { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false },
+        sessionId,
+      );
+      await evaluate("location.hash='#/admin/users'");
+      await until(`document.querySelector('[data-user-detail="${detailUser.id}"]')!==null`);
+      await evaluate(`document.querySelector('[data-user-detail="${detailUser.id}"]').click()`);
+      await until("document.querySelector('[data-stat=notes]')?.textContent==='1'");
+      assert.equal(
+        await evaluate("document.querySelector('[data-stat=follows]').textContent"),
+        '1',
+      );
+      assert.equal(
+        await evaluate(
+          "document.querySelector('.admin-user-dialog').textContent.includes('后台不应显示的笔记内容')",
+        ),
+        false,
+      );
+      await screenshot('admin-user-details');
+      await evaluate("document.querySelector('[data-edit-avatar]').click()");
+      assert.equal(
+        await evaluate("document.activeElement===document.querySelector('[data-avatar-file]')"),
+        true,
+      );
+      await screenshot('admin-user-avatar-entry');
+      await evaluate(
+        `(async()=>{const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;const ctx=canvas.getContext('2d');ctx.fillStyle='#cb416d';ctx.fillRect(0,0,320,180);const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));const dt=new DataTransfer();dt.items.add(new File([blob],'avatar.png',{type:'image/png'}));const input=document.querySelector('[data-avatar-file]');input.files=dt.files;input.dispatchEvent(new Event('change'));})()`,
+      );
+      await until("document.querySelector('[data-save-avatar]')?.disabled===false");
+      await evaluate(
+        "window.__originalConfirm=window.confirm;window.confirm=()=>false;document.querySelector('[data-save-avatar]').click()",
+      );
+      assert.equal(
+        await evaluate(
+          `fetch('/api/admin/users/${detailUser.id}').then(r=>r.json()).then(u=>u.avatar)`,
+        ),
+        detailUser.avatar,
+      );
+      await evaluate(
+        "window.confirm=()=>true;document.querySelector('[data-save-avatar]').click()",
+      );
+      await until("document.querySelector('[data-avatar-status]')?.textContent==='头像已保存'");
+      assert.equal(
+        await evaluate(
+          "document.querySelector('.admin-user-identity img').getAttribute('src').startsWith('/api/avatars/')",
+        ),
+        true,
+      );
+      await until("document.querySelector('.admin-user-identity img').naturalWidth===256");
+      await call(
+        'Emulation.setDeviceMetricsOverride',
+        { width: 390, height: 844, deviceScaleFactor: 1, mobile: true },
+        sessionId,
+      );
+      assert.equal(
+        await evaluate(
+          "(()=>{const d=document.querySelector('.admin-user-dialog');return d.scrollWidth<=d.clientWidth+1;})()",
+        ),
+        true,
+      );
+      await screenshot('admin-user-mobile');
+      await evaluate("document.querySelector('[data-reset-avatar]').click()");
+      await until(
+        "document.querySelector('.admin-user-identity img')?.getAttribute('src')==='/avatar-cheese.jpg'",
+      );
+      await until("document.querySelector('[data-avatar-status]')?.textContent==='头像已保存'");
+      await evaluate(
+        "window.confirm=window.__originalConfirm;delete window.__originalConfirm;document.querySelector('.admin-user-dialog [data-close]').click()",
+      );
+      await evaluate(
+        `document.querySelector('[data-user-detail="${registered.user.id}"]').click()`,
+      );
+      await until("document.querySelector('.admin-user-identity')!==null");
+      assert.equal(await evaluate("document.querySelector('[data-avatar-file]')===null"), true);
+      await evaluate("document.querySelector('.admin-user-dialog [data-close]').click()");
       assert.deepEqual(errors, []);
       return;
     }
@@ -482,7 +1046,7 @@ test(
         "fetch('/api/courses/39/visit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chapterId:390001})}).then(r=>r.json())",
       );
       await evaluate(
-        "fetch('/api/courses/39/favorite',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(r=>r.json())",
+        "fetch('/api/courses/39/favorite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chapterId:390001})}).then(r=>r.json())",
       );
       await call('Page.reload', {}, sessionId);
       await until(
@@ -883,92 +1447,13 @@ test(
         sessionId,
       );
       await evaluate("location.hash='#/explore'");
-      await until("document.querySelectorAll('.study-post').length===9");
-      assert.equal(await evaluate("document.querySelectorAll('.post-bilingual-badge').length"), 0);
-      await evaluate(
-        "document.querySelector('.study-experiences').scrollIntoView({behavior:'instant'})",
-      );
-      await screenshot('study-posts-expanded');
-      for (const id of [
-        'interleaving',
-        'dual-coding',
-        'concrete-examples',
-        'cornell-notes',
-        'start-small',
-        'recall',
-        'spacing',
-        'focus',
-        'finals',
-      ]) {
-        await evaluate('document.querySelector(\'[data-post="' + id + '"]\').click()');
-        await until("document.querySelector('.post-dialog')?.open");
-        assert.equal(
-          await evaluate("document.querySelector('.post-excerpt blockquote').lang"),
-          'en',
-        );
-        assert.equal(await evaluate("document.querySelector('.post-excerpt p').lang"), 'zh-CN');
-        assert.ok(await evaluate("document.querySelector('.post-excerpt p').textContent.length>8"));
-        assert.equal(
-          await evaluate(
-            "document.querySelector('.post-excerpt blockquote').cite===document.querySelector('.post-dialog footer a').href",
-          ),
-          true,
-        );
-        assert.equal(
-          await evaluate("document.querySelector('.post-excerpt-source').rel"),
-          'noopener noreferrer',
-        );
-        assert.ok(
-          await evaluate("document.querySelector('.post-practice p').textContent.length>20"),
-        );
-        if (id === 'dual-coding' || id === 'recall' || id === 'finals')
-          await screenshot('reader-' + id);
-        await evaluate("document.querySelector('.post-close').click()");
-        await until("document.querySelector('.post-dialog')===null");
-      }
-      assert.equal(
-        await evaluate("document.querySelectorAll('[data-post-topic],.post-filters').length"),
-        0,
-      );
-      await evaluate("document.querySelector('.article-feature-image').decode()");
-      assert.equal(
-        await evaluate("document.querySelector('.article-feature-image').naturalWidth>0"),
-        true,
-      );
+      await checkEditorialReader();
       await call(
         'Emulation.setDeviceMetricsOverride',
         { width: 390, height: 844, deviceScaleFactor: 1, mobile: true },
         sessionId,
       );
-      await evaluate('document.querySelector(\'[data-post="cornell-notes"]\').click()');
-      await until("document.querySelector('.post-dialog')?.open");
-      assert.equal(
-        await evaluate(
-          "document.querySelector('.post-dialog').scrollWidth<=document.querySelector('.post-dialog').clientWidth",
-        ),
-        true,
-      );
-      await screenshot('bilingual-reader-mobile');
-      await call(
-        'Input.dispatchKeyEvent',
-        { type: 'keyDown', key: 'Escape', code: 'Escape' },
-        sessionId,
-      );
-      await until("document.querySelector('.post-dialog')===null");
-      await evaluate(
-        "document.querySelector('#appearance-button').click();document.querySelector('#interface-language').value='en';document.querySelector('#interface-language').dispatchEvent(new Event('change'));document.querySelector('#appearance-done').click();document.querySelector('[data-post=\"cornell-notes\"]').click()",
-      );
-      await until(
-        "document.querySelector('.post-excerpt-title')?.textContent.includes('Original excerpt')",
-      );
-      assert.equal(
-        await evaluate("document.querySelector('.post-excerpt blockquote').textContent"),
-        'Cover the note-taking column with a sheet of paper.',
-      );
-      assert.equal(
-        await evaluate("document.querySelector('.post-excerpt p').textContent"),
-        '用一张纸盖住笔记记录栏。',
-      );
+      await checkEditorialReader();
       assert.deepEqual(errors, []);
       return;
     }
@@ -1600,7 +2085,7 @@ test(
       shelfCount - 1,
     );
     await evaluate(
-      "fetch('/api/courses/39/favorite',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(r=>r.json())",
+      "fetch('/api/courses/39/favorite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chapterId:390001})}).then(r=>r.json())",
     );
     await evaluate("document.querySelector('#study-category-trigger').click()");
     assert.equal(
@@ -1740,61 +2225,7 @@ test(
       sessionId,
     );
     await screenshot('discovery-redesigned');
-    assert.equal(await evaluate("document.querySelectorAll('.study-post').length"), 9);
-    await evaluate("document.querySelector('[data-full-article]').click()");
-    await until("document.querySelector('.article-reader')?.open");
-    assert.equal(
-      await evaluate(
-        "document.querySelectorAll('.article-reader-body h1,.article-reader-body h2,.article-reader-body h3').length",
-      ),
-      41,
-    );
-    assert.equal(
-      await evaluate(
-        "document.querySelector('.article-reader-body').textContent.includes('特别有价值的建议和改进。')",
-      ),
-      true,
-    );
-    await evaluate(
-      "document.querySelector('.article-reader-toc').open=true;document.querySelector('.article-reader-toc a[href=\"#smart-鸣谢\"]').click()",
-    );
-    assert.equal(await evaluate('document.activeElement.id'), 'smart-鸣谢');
-    assert.equal(await evaluate('location.hash'), '#/explore');
-    assert.ok(
-      (await evaluate("document.querySelector('.article-reader-scroll').scrollTop")) > 1000,
-    );
-    await evaluate("document.querySelector('[data-reader-top]').click()");
-    assert.equal(await evaluate("document.querySelector('.article-reader-scroll').scrollTop"), 0);
-    await screenshot('smart-questions-reader');
-    await call(
-      'Input.dispatchKeyEvent',
-      { type: 'keyDown', key: 'Escape', code: 'Escape' },
-      sessionId,
-    );
-    await until("document.querySelector('.article-reader')===null");
-    assert.equal(await evaluate("document.activeElement.matches('[data-full-article]')"), true);
-    await evaluate(
-      "document.querySelector('.study-experiences').scrollIntoView({block:'start',behavior:'instant'})",
-    );
-    await screenshot('study-experience-posts');
-    assert.equal(
-      await evaluate("document.querySelectorAll('[data-post-topic],.post-filters').length"),
-      0,
-    );
-    await evaluate("document.querySelector('[data-post=finals]').click()");
-    await until("document.querySelector('.post-dialog')?.open");
-    assert.equal(
-      await evaluate("document.querySelector('.post-dialog footer a').href"),
-      'https://mitadmissions.org/blogs/entry/how_to_finals/',
-    );
-    await screenshot('study-post-reader');
-    await call(
-      'Input.dispatchKeyEvent',
-      { type: 'keyDown', key: 'Escape', code: 'Escape' },
-      sessionId,
-    );
-    await until("document.querySelector('.post-dialog')===null");
-    assert.equal(await evaluate("document.querySelectorAll('.study-post').length"), 9);
+    await checkEditorialReader();
     await call(
       'Emulation.setDeviceMetricsOverride',
       { width: 390, height: 844, deviceScaleFactor: 1, mobile: true },
@@ -2151,7 +2582,7 @@ test(
       '/logo-mark.svg',
     );
     assert.deepEqual(errors, []);
-    const brandSvg = await readFile('logo.svg', 'utf8');
+    const brandSvg = await readFile('frontend/assets/logo.svg', 'utf8');
     await call(
       'Emulation.setDeviceMetricsOverride',
       { width: 800, height: 300, deviceScaleFactor: 1, mobile: false },

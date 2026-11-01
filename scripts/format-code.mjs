@@ -19,11 +19,23 @@ export async function sourceFiles() {
     .filter((entry) => entry.isFile() && /\.(?:js|mjs|css|html)$/.test(entry.name))
     .map((entry) => entry.name)
     .filter((name) => name !== 'handwriting-data.js');
-  for (const directory of ['scripts', 'tests']) {
+  for (const directory of [
+    'backend',
+    'frontend/js',
+    'frontend/css',
+    'frontend',
+    'scripts',
+    'tests',
+  ]) {
     const entries = await readdir(resolve(root, directory), { withFileTypes: true });
     files.push(
       ...entries
-        .filter((entry) => entry.isFile() && /\.(?:js|mjs)$/.test(entry.name))
+        .filter(
+          (entry) =>
+            entry.isFile() &&
+            /\.(?:js|mjs|css|html)$/.test(entry.name) &&
+            entry.name !== 'handwriting-data.js',
+        )
         .map((entry) => `${directory}/${entry.name}`),
     );
   }
@@ -51,7 +63,7 @@ export async function formattedSource(file, source) {
   // handwritten functions around it. The placeholder is a standalone comment.
   const generated = [];
   const input =
-    file === 'study-posts.js'
+    file === 'frontend/js/study-posts.js'
       ? source.replace(
           /\/\/ BEGIN SMART QUESTIONS[^\r\n]*[\s\S]*?\/\/ END SMART QUESTIONS[^\r\n]*/g,
           (block) => {

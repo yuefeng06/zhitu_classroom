@@ -1,10 +1,10 @@
-import '../config.mjs';
+import '../backend/config.mjs';
 import mysql from 'mysql2/promise';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mysqlOptions } from '../config.mjs';
-import { relationships } from '../relationships.mjs';
+import { mysqlOptions } from '../backend/config.mjs';
+import { relationships } from '../backend/relationships.mjs';
 
 const removed = ['coins', 'comment_moderation', 'admin_audit', 'sessions', 'account_status'];
 const additions = [

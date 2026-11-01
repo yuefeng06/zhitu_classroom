@@ -1,4 +1,4 @@
-import { trainAndEvaluate } from '../recommendation-evaluation.mjs';
+import { trainAndEvaluate } from '../backend/recommendation-evaluation.mjs';
 import { writeFile } from 'node:fs/promises';
 // Clearly labelled synthetic fixture, separate from business training and model store.
 const courses = Array.from({ length: 40 }, (_, i) => ({

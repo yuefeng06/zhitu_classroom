@@ -1,10 +1,10 @@
-import { trainAndEvaluate } from '../recommendation-evaluation.mjs';
-import '../config.mjs';
+import { trainAndEvaluate } from '../backend/recommendation-evaluation.mjs';
+import '../backend/config.mjs';
 import { mkdir, writeFile, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { openDatabase } from '../database.mjs';
-import { readSignals, MODEL_VERSION } from '../recommendations.mjs';
-import { modelPath, modelScope } from '../recommendation-store.mjs';
+import { openDatabase } from '../backend/database.mjs';
+import { readSignals, MODEL_VERSION } from '../backend/recommendations.mjs';
+import { modelPath, modelScope } from '../backend/recommendation-store.mjs';
 const db = await openDatabase();
 try {
   const courses = await db.all('SELECT * FROM courses WHERE published=1');

@@ -10,7 +10,7 @@ const requested = process.argv
 const allCourses = catalog;
 if (requested?.some((id) => !allCourses.some((c) => c.id === id))) throw Error('存在未知课程编号');
 const courses = requested ? allCourses.filter((c) => requested.includes(c.id)) : allCourses;
-await mkdir(new URL('../course-images/', import.meta.url), { recursive: true });
+await mkdir(new URL('../frontend/assets/course-images/', import.meta.url), { recursive: true });
 const sources = [];
 for (let i = 0; i < courses.length; i += 3) {
   const rows = await Promise.all(
@@ -28,7 +28,10 @@ for (let i = 0; i < courses.length; i += 3) {
       if (!image.ok) throw Error('Image failed ' + c.id);
       const bytes = Buffer.from(await image.arrayBuffer());
       if (bytes[0] !== 255 || bytes[1] !== 216) throw Error('Invalid JPEG ' + c.id);
-      await writeFile(new URL('../course-images/' + c.id + '.jpg', import.meta.url), bytes);
+      await writeFile(
+        new URL('../frontend/assets/course-images/' + c.id + '.jpg', import.meta.url),
+        bytes,
+      );
       return {
         id: c.id,
         title: c.title,

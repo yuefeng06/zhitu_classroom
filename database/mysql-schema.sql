@@ -61,16 +61,17 @@ CREATE TABLE `follows` (
 
 CREATE TABLE `favorites` (
   `user_id` BIGINT NOT NULL,
-  `course_id` BIGINT NOT NULL,
+  `chapter_id` BIGINT NOT NULL,
   `created_at` DATETIME(3) NULL DEFAULT CURRENT_TIMESTAMP(3),
-  PRIMARY KEY (`user_id`,`course_id`),
-  KEY `idx_course_id` (`course_id`),
+  PRIMARY KEY (`user_id`,`chapter_id`),
+  KEY `idx_chapter_id` (`chapter_id`),
   KEY `idx_user_id` (`user_id`)
-) ENGINE=InnoDB COMMENT='课程收藏';
+) ENGINE=InnoDB COMMENT='章节视频收藏';
 
 CREATE TABLE `comments` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
   `course_id` BIGINT NOT NULL,
+  `chapter_id` BIGINT NULL DEFAULT NULL,
   `user_id` BIGINT NOT NULL,
   `content` TEXT NOT NULL,
   `likes` BIGINT NULL DEFAULT 0,
@@ -78,11 +79,14 @@ CREATE TABLE `comments` (
   `created_at` DATETIME(3) NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`id`),
   KEY `idx_user_id` (`user_id`),
-  KEY `idx_course_id` (`course_id`)
-) ENGINE=InnoDB COMMENT='课程讨论';
+  KEY `idx_course_id` (`course_id`),
+  KEY `idx_comments_chapter` (`course_id`,`chapter_id`,`hidden`,`id`)
+) ENGINE=InnoDB COMMENT='章节讨论及历史课程评论';
 
 CREATE TABLE `danmaku` (
   `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NULL DEFAULT NULL,
+  `hidden` BIGINT NOT NULL DEFAULT 0,
   `course_id` BIGINT NOT NULL,
   `content` TEXT NOT NULL,
   `at_second` BIGINT NULL DEFAULT 8,
@@ -91,7 +95,9 @@ CREATE TABLE `danmaku` (
   `chapter_id` BIGINT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_chapter_id` (`chapter_id`),
-  KEY `idx_course_id` (`course_id`)
+  KEY `idx_course_id` (`course_id`),
+  KEY `idx_danmaku_user` (`user_id`),
+  KEY `idx_danmaku_review` (`course_id`,`chapter_id`,`hidden`,`id`)
 ) ENGINE=InnoDB COMMENT='弹幕';
 
 CREATE TABLE `progress` (

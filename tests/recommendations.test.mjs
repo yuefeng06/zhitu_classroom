@@ -1,8 +1,8 @@
-import { trainAndEvaluate, chronologicalSplit } from '../recommendation-evaluation.mjs';
+import { trainAndEvaluate, chronologicalSplit } from '../backend/recommendation-evaluation.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { rankCourses, fitBpr, mergeSignals, MODEL_VERSION } from '../recommendations.mjs';
-import { validModel, modelScope } from '../recommendation-store.mjs';
+import { rankCourses, fitBpr, mergeSignals, MODEL_VERSION } from '../backend/recommendations.mjs';
+import { validModel, modelScope } from '../backend/recommendation-store.mjs';
 const course = (id, subject, published = 1) => ({
   id,
   subject,
@@ -105,4 +105,26 @@ test('全局时间分割不拆开同一时刻，训练验证测试边界不重�
     Math.max(...split.validation.map((s) => s.time)) < Math.min(...split.test.map((s) => s.time)),
   );
   assert.equal(chronologicalSplit([{ at: 'bad' }]), null);
+});
+import { DatabaseSync } from 'node:sqlite';
+import { readSignals, readPopularity } from '../backend/recommendations.mjs';
+test('章节收藏聚合为课程兴趣，多集不重复增加权重或人数', async () => {
+  const sql = new DatabaseSync(':memory:');
+  try {
+    sql.exec(`CREATE TABLE courses(id INTEGER,published INTEGER); CREATE TABLE chapters(id INTEGER,course_id INTEGER);
+  CREATE TABLE favorites(user_id INTEGER,chapter_id INTEGER,created_at TEXT); CREATE TABLE course_visits(user_id INTEGER,course_id INTEGER,updated_at TEXT);
+  INSERT INTO courses VALUES(1,1),(2,0); INSERT INTO chapters VALUES(11,1),(12,1),(21,2);
+  INSERT INTO favorites VALUES(1,11,'2026-01-01'),(1,12,'2026-01-02'),(2,12,'2026-01-03'),(1,21,'2026-01-04');
+  INSERT INTO course_visits VALUES(1,1,'2026-01-05');`);
+    const db = { all: async (q, ...args) => sql.prepare(q).all(...args) };
+    assert.deepEqual(await readSignals(db, 1), [
+      { userId: 1, courseId: 1, weight: 4, at: '2026-01-05' },
+    ]);
+    assert.equal((await readSignals(db)).length, 2);
+    const popular = await readPopularity(db);
+    assert.equal(popular.length, 1);
+    assert.equal(popular[0].count, 2);
+  } finally {
+    sql.close();
+  }
 });

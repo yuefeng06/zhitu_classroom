@@ -1,4 +1,4 @@
-import '../config.mjs';
+import '../backend/config.mjs';
 import mysql from 'mysql2/promise';
 import { DatabaseSync, backup } from 'node:sqlite';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -6,9 +6,9 @@ import { existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { scryptSync, timingSafeEqual, randomBytes } from 'node:crypto';
-import { mysqlOptions } from '../config.mjs';
-import { ensureSchema, schemaTables, tableNames } from '../mysql-schema.mjs';
-import { initializeSqlite } from '../sqlite-bootstrap.mjs';
+import { mysqlOptions } from '../backend/config.mjs';
+import { ensureSchema, schemaTables, tableNames } from '../backend/mysql-schema.mjs';
+import { initializeSqlite } from '../backend/sqlite-bootstrap.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const normalized = (value) => (typeof value === 'string' ? value.replace(/\.000$/, '') : value);

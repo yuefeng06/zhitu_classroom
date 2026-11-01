@@ -1,7 +1,7 @@
-import '../config.mjs';
-import { relationships } from '../relationships.mjs';
+import '../backend/config.mjs';
+import { relationships } from '../backend/relationships.mjs';
 import mysql from 'mysql2/promise';
-import { mysqlOptions } from '../config.mjs';
+import { mysqlOptions } from '../backend/config.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -36,7 +36,7 @@ const labels = {
   comments: '评论表',
   live_events: '直播表',
   notes: '学习笔记表',
-  favorites: '课程收藏表',
+  favorites: '章节视频收藏表',
   progress: '课程学习进度表',
   coins: '课程投币表',
   reservations: '直播预约表',
@@ -52,10 +52,11 @@ const purposes = {
   users: '保存用户身份、密码摘要、头像、停用状态及唯一有效会话摘要和过期时间。',
   courses: '保存课程目录及上架信息；分类和学科分别使用 category、subject。',
   chapters: '保存课程分集、时长和展示顺序，每个章节归属于一门课程。',
-  comments: '记录用户对课程发表的评论及其审核隐藏状态。',
+  comments:
+    '记录用户对具体章节视频发表的评论及审核隐藏状态；旧评论未记录章节，chapter_id 保持 NULL，由后台历史课程评论入口管理。',
   live_events: '保存直播主题、讲师、开始时间和发布状态。',
   notes: '保存用户在指定课程章节、指定视频时间点留下的私有笔记。',
-  favorites: '实现 ER 图中用户与课程之间的多对多收藏关系。',
+  favorites: '实现用户与章节视频之间的多对多收藏关系；课程由 chapters.course_id 关联取得。',
   progress: '实现 ER 图中的学习关系，记录用户在每门课程上的章节与完成百分比。',
   coins: '实现 ER 图中用户与课程之间的多对多投币关系。',
   reservations: '实现 ER 图中用户与直播之间的多对多预约关系。',
@@ -63,7 +64,7 @@ const purposes = {
   chapter_playback: '记录原生直链播放器的章节秒数和完成百分比；B 站播放器不自动回传秒数。',
   sessions: '保存登录会话与失效时间，支撑服务端身份校验。',
   follows: '记录用户关注的讲师名称；当前没有独立讲师实体表。',
-  danmaku: '保存课程弹幕内容、出现时间和颜色，可关联到具体章节。',
+  danmaku: '保存章节视频弹幕、发送者及审核隐藏状态；旧作者和旧章节未知时保持空值，不推测归属。',
 };
 const shared = {
   id: '记录编号',
@@ -80,6 +81,15 @@ const shared = {
   percent: '完成百分比，业务范围为 0–100',
 };
 const descriptions = {
+  comments: {
+    chapter_id: '逻辑关联 chapters.id，须属于 course_id 指定的课程；旧评论可空，新评论必须指定章节',
+    hidden: '审核隐藏状态：0 为保留显示，1 为隐藏；删除通过受权限及版本保护的接口执行',
+  },
+  favorites: {
+    user_id: '收藏者编号，联合主键之一；逻辑关联 users.id',
+    chapter_id: '收藏的视频章节编号，联合主键之一；逻辑关联 chapters.id',
+    created_at: '收藏时间；迁移保留原课程收藏时间',
+  },
   history_resets: {
     user_id: '用户编号，主键；逻辑关联 users.id',
     cleared_at: '最近确认清除历史的服务端时间，UTC',
@@ -155,7 +165,9 @@ const descriptions = {
   danmaku: {
     at_second: '弹幕出现时间，单位秒，当前数据库使用整数',
     color: '弹幕文字颜色，例如 #ffffff',
-    chapter_id: '弹幕所属章节，可空；此表未存储用户编号',
+    chapter_id: '逻辑关联 chapters.id；旧记录可空，新发弹幕必须属于所选课程章节',
+    user_id: '逻辑关联 users.id，按服务端会话记录发送者；历史未记录作者时为空',
+    hidden: '0 表示可见，1 表示后台隐藏；用户端只读取本节可见弹幕',
   },
 };
 Object.assign(labels, {
@@ -275,9 +287,9 @@ try {
         '两个一对多关系；notes.course_id 同时关联课程',
       ],
       [
-        '用户收藏、学习课程',
+        '用户收藏章节视频、学习课程',
         'favorites、progress',
-        '两个多对多关系分别建立关联表，均以 user_id 与 course_id 为联合主键',
+        '收藏以 user_id 与 chapter_id 为联合主键；学习进度以 user_id 与 course_id 为联合主键',
       ],
       ['用户预约直播', 'reservations', '多对多关系，以 user_id 与 live_id 为联合主键'],
       [

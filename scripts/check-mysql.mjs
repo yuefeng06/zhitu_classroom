@@ -1,7 +1,7 @@
-import '../config.mjs';
+import '../backend/config.mjs';
 import mysql from 'mysql2/promise';
-import { mysqlOptions } from '../config.mjs';
-import { validateSchema } from '../mysql-schema.mjs';
+import { mysqlOptions } from '../backend/config.mjs';
+import { validateSchema } from '../backend/mysql-schema.mjs';
 let connection;
 try {
   connection = await mysql.createConnection(mysqlOptions());

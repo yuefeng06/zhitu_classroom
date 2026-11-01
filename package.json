@@ -10,7 +10,7 @@
     "format:powershell:check": "pwsh -NoProfile -File scripts/format-powershell.ps1 -Check",
     "start": "node server.mjs",
     "dev": "node --watch server.mjs",
-    "test": "node --test tests/integration.test.mjs tests/recommendations.test.mjs tests/platform.test.mjs",
+    "test": "node --test tests/integration.test.mjs tests/recommendations.test.mjs tests/platform.test.mjs tests/admin-media.test.mjs",
     "recommend:train": "node scripts/train-recommendations.mjs",
     "test:browser": "node --test tests/browser.test.mjs",
     "db:migrate": "node scripts/migrate-mysql.mjs",

@@ -1,5 +1,5 @@
 -- 知途课堂：数据库表结构答辩讲解版（MySQL 8.0）
--- 依据实际结构快照：2026-10-14T10:52:05.133Z；源库：zhitu_classroom。
+-- 依据实际结构快照：2026-10-15T02:21:39.018Z；源库：zhitu_classroom。
 -- 本文件保留原导出的全部建表语句，仅增加中文行注释，不改变实际字段与约束。
 -- 用法：在 MySQL Workbench 打开，定位到表逐段讲解。
 -- 如需执行建表，仅在已选中的新空库运行；不要在 zhitu_classroom 业务库重复执行。
@@ -15,7 +15,7 @@
 -- 本轮已移除所有物理外键，关联列和查询索引仍保留。
 -- 直接 SQL 不再有外键保护；后台仅下架课程或停用账号，接口负责存在性与归属校验。
 --
--- 知途课堂 MySQL 实际结构，源库 zhitu_classroom，2026-10-14T10:52:05.133Z
+-- 知途课堂 MySQL 实际结构，源库 zhitu_classroom，2026-10-15T02:21:39.018Z
 -- 仅在已选中的新空库执行；不包含数据、DROP 或 USE。
 -- 自增计数起点已省略；视图使用 SQL SECURITY INVOKER，移除源库限定名。
 SET NAMES utf8mb4;
@@ -222,20 +222,20 @@ CREATE TABLE `notes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学习笔记';
 
 -- ============================================================
--- 09  课程收藏表（favorites）
--- 设计理由：用户可收藏多门课程，课程可被多人收藏；两列组合保证同一收藏关系不重复。
+-- 09  章节视频收藏表（favorites）
+-- 设计理由：用户可收藏多个章节视频，同一章节可被多人收藏；user_id 与 chapter_id 联合主键避免同一用户重复收藏同一集，允许同一课程收藏多集。
 CREATE TABLE `favorites` (
-  -- 关联用户编号
+  -- 收藏者编号，联合主键之一；逻辑关联 users.id
   `user_id` bigint unsigned NOT NULL,
-  -- 关联课程编号
-  `course_id` bigint unsigned NOT NULL,
-  -- 创建时间
+  -- 收藏时间；迁移保留原课程收藏时间
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  -- 主键设计：用户可收藏多门课程，课程可被多人收藏；两列组合保证同一收藏关系不重复。
-  PRIMARY KEY (`user_id`,`course_id`),
+  -- 收藏的视频章节编号，联合主键之一；逻辑关联 chapters.id
+  `chapter_id` bigint unsigned NOT NULL,
+  -- 主键设计：用户可收藏多个章节视频，同一章节可被多人收藏；user_id 与 chapter_id 联合主键避免同一用户重复收藏同一集，允许同一课程收藏多集。
+  PRIMARY KEY (`user_id`,`chapter_id`),
   -- 普通索引：辅助相关列的查询；不会禁止这些列出现重复值。
-  KEY `fk_favorite_course` (`course_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程收藏表';
+  KEY `idx_favorites_chapter` (`chapter_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='章节视频收藏表';
 
 -- ============================================================
 -- 10  课程学习进度表（progress）

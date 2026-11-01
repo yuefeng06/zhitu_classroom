@@ -25,8 +25,8 @@ SHOW CREATE TABLE `courses`;
 
 SHOW CREATE TABLE `chapters`;
 
--- 4. 多对多：同一用户可收藏不同课程，不同用户可收藏同一课程。
--- (user_id, course_id) 联合主键限制同一个收藏组合不能重复。
+-- 4. 多对多：同一用户可收藏不同章节视频，不同用户可收藏同一章节视频。
+-- (user_id, chapter_id) 联合主键限制同一个收藏组合不能重复。
 SHOW CREATE TABLE `favorites`;
 
 -- 5. 每人每天最多一条打卡，由 (user_id, checkin_date) 联合主键保证。

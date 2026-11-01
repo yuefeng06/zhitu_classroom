@@ -1,10 +1,10 @@
-import '../config.mjs';
+import '../backend/config.mjs';
 import mysql from 'mysql2/promise';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
-import { mysqlOptions } from '../config.mjs';
-import { schemaTables } from '../mysql-schema.mjs';
+import { mysqlOptions } from '../backend/config.mjs';
+import { schemaTables } from '../backend/mysql-schema.mjs';
 
 export async function addHistoryResets({ apply = false, backupDir } = {}) {
   const db = await mysql.createConnection(mysqlOptions());

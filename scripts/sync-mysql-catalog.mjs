@@ -1,10 +1,10 @@
-import '../config.mjs';
+import '../backend/config.mjs';
 import mysql from 'mysql2/promise';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
-import { mysqlOptions } from '../config.mjs';
-import { videoCatalog, normalizeCategory, retiredCourseIds } from '../catalog.mjs';
+import { mysqlOptions } from '../backend/config.mjs';
+import { videoCatalog, normalizeCategory, retiredCourseIds } from '../backend/catalog.mjs';
 
 // Incremental course content only: never migrate accounts or delete chapters.
 export async function syncMysqlCatalog({ ids, unpublishIds = [], apply = false, backupDir } = {}) {

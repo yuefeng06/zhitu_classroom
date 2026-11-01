@@ -1,10 +1,12 @@
+import { checkLearningAdmin } from './admin-learning-scenarios.mjs';
+import { checkChapterFavorites } from './chapter-favorites-scenarios.mjs';
 import { checkAdminApi } from './admin-scenarios.mjs';
-import { videoCatalog } from '../catalog.mjs';
-import { studyDate, checkinSummary } from '../checkins.mjs';
+import { videoCatalog } from '../backend/catalog.mjs';
+import { studyDate, checkinSummary } from '../backend/checkins.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
@@ -13,6 +15,12 @@ import { DatabaseSync } from 'node:sqlite';
 test('前后端接口与持久化完整流程', async (t) => {
   const dir = await mkdtemp(join(tmpdir(), 'zhitu-test-'));
   const database = join(dir, 'test.db');
+  const fixtureMedia = join(dir, 'media.json');
+  const mediaConfig = JSON.parse(await readFile('media-sources.json', 'utf8'));
+  // Business uploads can reuse IDs created by isolated tests; never import those bindings.
+  mediaConfig.chapters = {};
+  for (let id = 1; id <= 15; id++) mediaConfig.chapters[id] = mediaConfig.default;
+  await writeFile(fixtureMedia, JSON.stringify(mediaConfig));
   let child,
     base,
     cookie = '',
@@ -22,7 +30,10 @@ test('前后端接口与持久化完整流程', async (t) => {
       env: {
         ...process.env,
         AVATAR_DIR: join(dir, 'avatars'),
+        VIDEO_DIR: join(dir, 'videos'),
+        COURSE_COVER_DIR: join(dir, 'covers'),
         DB_CLIENT: 'sqlite',
+        MEDIA_CONFIG_PATH: fixtureMedia,
         PORT: '0',
         DB_PATH: database,
       },
@@ -188,7 +199,7 @@ test('前后端接口与持久化完整流程', async (t) => {
   });
   await t.test('首页推荐随收藏变化，忽略伪造账号并隔离模型文件', async () => {
     assert.equal((await request('/api/home')).recommendationMethod, 'discovery');
-    await request('/api/courses/17/favorite', {});
+    await request('/api/courses/17/favorite', { chapterId: 170001 });
     const personalized = await request('/api/home?userId=1');
     assert.equal(personalized.recommendationMethod, 'content');
     assert.ok([18, 19].includes(personalized.recommendations[0].id));
@@ -204,12 +215,13 @@ test('前后端接口与持久化完整流程', async (t) => {
       '/recommendation-store.mjs',
     ])
       assert.equal((await fetch(base + path)).status, 404);
-    await request('/api/courses/17/favorite', {});
+    await request('/api/courses/17/favorite', { chapterId: 170001 });
     assert.equal((await request('/api/home')).recommendationMethod, 'discovery');
   });
   await t.test('头像上传、身份隔离、文件验证和恢复默认', async () => {
     const image =
-      'data:image/jpeg;base64,' + (await readFile('course-images/9.jpg')).toString('base64');
+      'data:image/jpeg;base64,' +
+      (await readFile('frontend/assets/course-images/9.jpg')).toString('base64');
     await request('/api/me/avatar', { image }, 401, { Cookie: '' });
     await request('/api/me/avatar', { image: 'data:image/svg+xml;base64,PHN2Zz4=' }, 400);
     await request('/api/me/avatar', { image: 'data:image/jpeg;base64,' + 'A'.repeat(300000) }, 413);
@@ -222,7 +234,7 @@ test('前后端接口与持久化完整流程', async (t) => {
     assert.equal(picture.headers.get('x-content-type-options'), 'nosniff');
     assert.deepEqual(
       Buffer.from(await picture.arrayBuffer()),
-      await readFile('course-images/9.jpg'),
+      await readFile('frontend/assets/course-images/9.jpg'),
     );
     const db = new DatabaseSync(database);
     assert.equal(db.prepare('SELECT avatar FROM users WHERE id=1').get().avatar, '林');
@@ -261,17 +273,23 @@ test('前后端接口与持久化完整流程', async (t) => {
     assert.equal((await request('/api/me/checkins')).total, 1);
   });
   await t.test('收藏、关注、评论、弹幕、学习和预约', async () => {
-    for (const action of ['favorite', 'follow'])
+    for (const action of ['follow'])
       assert.equal((await request('/api/courses/4/' + action, {})).active, true);
-    await request('/api/courses/4/comments', { content: '联调评论 <script>example</script>' });
-    await request('/api/courses/4/danmaku', { content: '联调弹幕' });
+    await request('/api/courses/4/comments', { chapterId: 1, content: '下架课程拒绝新评论' }, 404);
+    await request('/api/courses/39/comments', {
+      chapterId: 390001,
+      content: '联调评论 <script>example</script>',
+    });
+    await request('/api/courses/39/danmaku', { chapterId: 390001, content: '联调弹幕' });
     const detail = await request('/api/courses/4');
-    assert.equal(detail.course.favorite, true);
+    assert.equal(detail.course.favorite_chapter_count, 0);
     assert.equal('coin' in detail.course, false);
     await request('/api/courses/39/coin', {}, 404);
     assert.equal(detail.followed, true);
-    assert.ok(detail.comments.some((c) => c.content.includes('联调评论')));
-    assert.ok(detail.danmaku.some((c) => c.content === '联调弹幕'));
+    assert.ok(
+      (await request('/api/courses/39')).comments.some((c) => c.content.includes('联调评论')),
+    );
+    assert.ok((await request('/api/courses/39')).danmaku.some((c) => c.content === '联调弹幕'));
     await request('/api/courses/4/progress', {
       chapterId: detail.chapters[1].id,
       currentTime: 72,
@@ -281,7 +299,7 @@ test('前后端接口与持久化完整流程', async (t) => {
     assert.equal((await request('/api/home')).continuing, null);
     assert.deepEqual(await request('/api/me/courses'), { learning: [], favorites: [] });
     assert.deepEqual(await request('/api/lives'), []);
-    await request('/api/courses/39/favorite', {});
+    await request('/api/courses/39/favorite', { chapterId: 390001 });
     const fixture = new DatabaseSync(database);
     fixture
       .prepare('INSERT INTO live_events(id,title,teacher,starts_at) VALUES(99,?,?,?)')
@@ -478,7 +496,7 @@ test('前后端接口与持久化完整流程', async (t) => {
       password: 'history-test',
     });
     await request('/api/courses/17/visit', { chapterId: 170001 });
-    await request('/api/courses/17/favorite', {});
+    await request('/api/courses/17/favorite', { chapterId: 170001 });
     await request(
       '/api/courses/17/notes',
       { chapterId: 170001, atSecond: 15, content: '清历史保留笔记' },
@@ -519,6 +537,27 @@ test('前后端接口与持久化完整流程', async (t) => {
     await request('/api/courses/17/visit', { chapterId: 170001 });
     assert.equal((await request('/api/me/courses')).learning[0].id, 17);
   });
+  await t.test('学习记录清理、弹幕审核与密码重置', () =>
+    checkLearningAdmin(
+      base,
+      (uid) => {
+        const f = new DatabaseSync(database);
+        f.prepare('INSERT INTO admin_accounts(user_id) VALUES(?)').run(uid);
+        f.close();
+      },
+      (uid, ch) => {
+        const f = new DatabaseSync(database);
+        f.prepare(
+          'INSERT INTO chapter_playback(user_id,chapter_id,current_time,duration,percent) VALUES(?,?,12,60,20)',
+        ).run(uid, ch);
+        f.prepare(
+          'INSERT INTO progress(user_id,course_id,chapter_id,percent) VALUES(?,39,?,20)',
+        ).run(uid, ch);
+        f.close();
+      },
+    ),
+  );
+  await t.test('章节收藏、独立分集与账号隔离', () => checkChapterFavorites(base));
   await t.test('正式后台权限、课程文章审核、单会话及并发注册', async () => {
     await checkAdminApi(base, async (uid) => {
       const fixture = new DatabaseSync(database);

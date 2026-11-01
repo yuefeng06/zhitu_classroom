@@ -1,3 +1,8 @@
+import { checkLearningAdmin } from './admin-learning-scenarios.mjs';
+import { addDanmakuModeration } from '../scripts/add-danmaku-moderation.mjs';
+import { checkChapterFavoriteMigration } from './chapter-favorites-migration.mjs';
+import { addChapterComments } from '../scripts/add-chapter-comments.mjs';
+import { checkChapterFavorites } from './chapter-favorites-scenarios.mjs';
 import { checkSchemaSimplification } from './schema-simplification.mjs';
 import { checkAdminApi } from './admin-scenarios.mjs';
 import { syncMysqlCatalog } from '../scripts/sync-mysql-catalog.mjs';
@@ -5,15 +10,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve, sep } from 'node:path';
 import net from 'node:net';
 import mysql from 'mysql2/promise';
 import { DatabaseSync } from 'node:sqlite';
-import { initializeSqlite } from '../sqlite-bootstrap.mjs';
-import { schemaTables } from '../mysql-schema.mjs';
+import { initializeSqlite } from '../backend/sqlite-bootstrap.mjs';
+import { schemaTables } from '../backend/mysql-schema.mjs';
 import { migrateMysql } from '../scripts/migrate-mysql.mjs';
 
 const executable =
@@ -25,6 +30,7 @@ test(
   async (t) => {
     const testRoot = resolve(process.env.MYSQL_TEST_TMP || tmpdir());
     const dir = await mkdtemp(join(testRoot, 'zhitu-mysql-test-'));
+    await writeFile(join(dir, 'media.json'), JSON.stringify({ chapters: {} }));
     assert.ok(
       resolve(dir).startsWith(testRoot + sep + 'zhitu-mysql-test-'),
       '清理目标必须在测试临时目录内',
@@ -120,6 +126,9 @@ test(
     await t.test('旧22表精简迁移、预检、恢复与幂等', async () =>
       checkSchemaSimplification(connection, dir),
     );
+    await t.test('课程收藏迁移为章节、回退及幂等', () =>
+      checkChapterFavoriteMigration(connection, dir),
+    );
     // Reproduce the user's old ten-table schema with UNSIGNED parent IDs.
     const added = new Set([
       'course_visits',
@@ -138,7 +147,9 @@ test(
       if (table.name === 'danmaku')
         sql = sql
           .replace(/^  `chapter_id`[^\n]*\n/gm, '')
-          .replace(/^  KEY `idx_chapter_id`[^\n]*\n/gm, '');
+          .replace(/^  KEY `idx_danmaku_review`[^\n]*\n/gm, '')
+          .replace(/^  KEY `idx_chapter_id`[^\n]*\n/gm, '')
+          .replace(/,\n\)/g, '\n)');
       if (table.name === 'users')
         sql = sql
           .replace('`password`', '`password_hash`')
@@ -182,7 +193,7 @@ test(
     await t.test('冲突中止整个数据事务，不覆盖已有笔记', async () => {
       const changed = new DatabaseSync(sourcePath);
       changed.prepare("UPDATE notes SET content='冲突内容' WHERE id=1").run();
-      changed.prepare('INSERT INTO favorites VALUES(1,9,CURRENT_TIMESTAMP)').run();
+      changed.prepare('INSERT INTO favorites VALUES(1,9001,CURRENT_TIMESTAMP)').run();
       changed.close();
       await assert.rejects(
         migrateMysql({ sourcePath, backupDir: join(dir, 'backup-3') }),
@@ -191,16 +202,68 @@ test(
       const [[note]] = await connection.query('SELECT content FROM notes WHERE id=1');
       assert.equal(note.content, '迁移前的私有笔记');
       const [favorites] = await connection.query(
-        'SELECT 1 FROM favorites WHERE user_id=1 AND course_id=9',
+        'SELECT 1 FROM favorites WHERE user_id=1 AND chapter_id=9001',
       );
       assert.equal(favorites.length, 0);
+    });
+    await t.test('章节评论增量升级保留旧评论、匹配无符号类型且可重复执行', async () => {
+      await connection.query(
+        'ALTER TABLE comments DROP INDEX idx_comments_chapter, DROP COLUMN chapter_id',
+      );
+      const [before] = await connection.query('SELECT * FROM comments ORDER BY id');
+      const plan = await addChapterComments(connection);
+      assert.equal(plan.statements.length, 2);
+      assert.equal(plan.chapterType, 'bigint unsigned');
+      await assert.rejects(addChapterComments(connection, { apply: true }), /maintenance/);
+      await addChapterComments(connection, {
+        apply: true,
+        maintenance: true,
+        backupDir: join(dir, 'comment-backup'),
+      });
+      const [after] = await connection.query('SELECT * FROM comments ORDER BY id');
+      assert.ok(after.every((r) => r.chapter_id === null));
+      assert.deepEqual(
+        after.map(({ chapter_id, ...r }) => r),
+        before,
+      );
+      assert.deepEqual((await addChapterComments(connection)).statements, []);
+    });
+    await t.test('弹幕审核增量升级保留历史内容与未知作者', async () => {
+      await connection.query(
+        'ALTER TABLE danmaku DROP INDEX idx_danmaku_user,DROP INDEX idx_danmaku_review,DROP COLUMN user_id,DROP COLUMN hidden',
+      );
+      const [before] = await connection.query('SELECT * FROM danmaku ORDER BY id');
+      const plan = await addDanmakuModeration(connection);
+      assert.equal(plan.statements.length, 4);
+      assert.equal(plan.userType, 'bigint unsigned');
+      await assert.rejects(addDanmakuModeration(connection, { apply: true }), /maintenance/);
+      await addDanmakuModeration(connection, {
+        apply: true,
+        maintenance: true,
+        backupDir: join(dir, 'dm-backup'),
+      });
+      const [after] = await connection.query('SELECT * FROM danmaku ORDER BY id');
+      assert.ok(after.every((r) => r.user_id === null && r.hidden === 0));
+      assert.deepEqual(
+        after.map(({ user_id, hidden, ...r }) => r),
+        before,
+      );
+      assert.deepEqual((await addDanmakuModeration(connection)).statements, []);
     });
     let base,
       cookie = '',
       serverOutput = '';
     const start = async () => {
       server = spawn(process.execPath, ['server.mjs'], {
-        env: { ...process.env, AVATAR_DIR: join(dir, 'avatars'), DB_CLIENT: 'mysql', PORT: '0' },
+        env: {
+          ...process.env,
+          AVATAR_DIR: join(dir, 'avatars'),
+          VIDEO_DIR: join(dir, 'videos'),
+          COURSE_COVER_DIR: join(dir, 'covers'),
+          MEDIA_CONFIG_PATH: join(dir, 'media.json'),
+          DB_CLIENT: 'mysql',
+          PORT: '0',
+        },
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
@@ -256,12 +319,12 @@ test(
       });
       assert.deepEqual(await request('/api/me/notes'), []);
       assert.equal((await request('/api/home')).recommendationMethod, 'discovery');
-      await request('/api/courses/17/favorite', {});
+      await request('/api/courses/17/favorite', { chapterId: 170001 });
       const recommended = await request('/api/home');
       assert.equal(recommended.recommendationMethod, 'content');
       assert.ok([18, 19].includes(recommended.recommendations[0].id));
       assert.equal(recommended.recommendations.at(-1).id, 17);
-      await request('/api/courses/17/favorite', {});
+      await request('/api/courses/17/favorite', { chapterId: 170001 });
       await request(
         '/api/auth/register',
         { nickname: 'MySQL 测试用户 🧀', password: 'test-password' },
@@ -344,7 +407,8 @@ test(
     await t.test('头像上传写入 MySQL 并限制到当前账户', async () => {
       const before = (await request('/api/auth/me')).user;
       const image =
-        'data:image/jpeg;base64,' + (await readFile('course-images/9.jpg')).toString('base64');
+        'data:image/jpeg;base64,' +
+        (await readFile('frontend/assets/course-images/9.jpg')).toString('base64');
       const result = await request('/api/me/avatar', { image, userId: 1 });
       savedAvatar = result.user.avatar;
       const [[row]] = await connection.execute('SELECT avatar FROM users WHERE id=?', [before.id]);
@@ -356,7 +420,7 @@ test(
     });
     let note;
     await t.test('收藏、最近学习、私有笔记、讨论与关注真正落库', async () => {
-      assert.equal((await request('/api/courses/39/favorite', {})).active, true);
+      assert.equal((await request('/api/courses/39/favorite', { chapterId: 390001 })).active, true);
       await request('/api/courses/39/coin', {}, 404);
       assert.equal((await request('/api/courses/39/follow', {})).active, true);
       await request('/api/courses/39/visit', { chapterId: 390001 });
@@ -368,8 +432,11 @@ test(
         { chapterId: 390001, atSecond: 42.5, content: 'MySQL 笔记 🧀' },
         201,
       );
-      await request('/api/courses/39/comments', { content: 'MySQL 中文讨论' });
-      await request('/api/courses/39/comments', { content: '长评论'.repeat(250) });
+      await request('/api/courses/39/comments', { chapterId: 390001, content: 'MySQL 中文讨论' });
+      await request('/api/courses/39/comments', {
+        chapterId: 390001,
+        content: '长评论'.repeat(250),
+      });
       assert.equal((await request('/api/me/overview')).noteCount, 1);
       const [[stored]] = await connection.execute('SELECT content FROM notes WHERE id=?', [
         note.id,
@@ -384,10 +451,10 @@ test(
       await request('/api/courses/4/progress', { chapterId: 1, currentTime: 10, duration: 100 });
       assert.equal((await request('/api/courses/4')).chapters[0].playback.percent, 25);
       await Promise.all([
-        request('/api/courses/39/favorite', {}),
-        request('/api/courses/39/favorite', {}),
+        request('/api/courses/39/favorite', { chapterId: 390001 }),
+        request('/api/courses/39/favorite', { chapterId: 390001 }),
       ]);
-      assert.equal((await request('/api/courses/39')).course.favorite, true);
+      assert.equal((await request('/api/courses/39')).course.favorite_chapter_count, 1);
       await connection.execute(
         'INSERT INTO live_events(id,title,teacher,starts_at,published) VALUES(10,?,?,?,1)',
         ['测试直播', '老师', '2099-01-01T10:00:00+08:00'],
@@ -423,7 +490,7 @@ test(
         password: 'history-test',
       });
       await request('/api/courses/17/visit', { chapterId: 170001 });
-      await request('/api/courses/17/favorite', {});
+      await request('/api/courses/17/favorite', { chapterId: 170001 });
       await request(
         '/api/courses/17/notes',
         { chapterId: 170001, atSecond: 1, content: '不删笔记' },
@@ -458,7 +525,7 @@ test(
       await connection.query(
         "INSERT INTO notes(user_id,course_id,chapter_id,at_second,content) VALUES(1,31,310001,12,'原章节笔记保留')",
       );
-      await connection.query('INSERT INTO favorites(user_id,course_id) VALUES(1,31)');
+      await connection.query('INSERT INTO favorites(user_id,chapter_id) VALUES(1,310001)');
       const plan = await syncMysqlCatalog({ ids: [31, 37, 38] });
       assert.equal(plan.applied, false);
       const [[before]] = await connection.query('SELECT lessons FROM courses WHERE id=31');
@@ -485,7 +552,7 @@ test(
       );
       assert.equal(saved.n, 1);
       const [[favorite]] = await connection.query(
-        'SELECT COUNT(*) AS n FROM favorites WHERE user_id=1 AND course_id=31',
+        'SELECT COUNT(*) AS n FROM favorites WHERE user_id=1 AND chapter_id=310001',
       );
       assert.equal(favorite.n, 1);
       assert.equal((await request('/api/catalog')).total, 33);
@@ -498,6 +565,23 @@ test(
           (await request('/api/courses/' + id)).chapters.every((c) => c.embed_url.includes(bvid)),
         );
     });
+    await t.test('学习记录清理、弹幕审核与密码重置', () =>
+      checkLearningAdmin(
+        base,
+        (uid) => connection.query('INSERT INTO admin_accounts(user_id) VALUES(?)', [uid]),
+        async (uid, ch) => {
+          await connection.query(
+            'INSERT INTO chapter_playback(user_id,chapter_id,`current_time`,duration,percent) VALUES(?,?,12,60,20)',
+            [uid, ch],
+          );
+          await connection.query(
+            'INSERT INTO progress(user_id,course_id,chapter_id,percent) VALUES(?,39,?,20)',
+            [uid, ch],
+          );
+        },
+      ),
+    );
+    await t.test('章节收藏、独立分集与账号隔离', () => checkChapterFavorites(base));
     await t.test('正式后台真实 MySQL 权限、单会话与并发昵称唯一', async () => {
       await checkAdminApi(base, (uid) =>
         connection.query('INSERT INTO admin_accounts(user_id) VALUES(?)', [uid]),

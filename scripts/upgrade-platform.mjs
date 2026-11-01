@@ -1,8 +1,8 @@
-import '../config.mjs';
+import '../backend/config.mjs';
 import mysql from 'mysql2/promise';
 import { join } from 'node:path';
-import { mysqlOptions } from '../config.mjs';
-import { schemaTables } from '../mysql-schema.mjs';
+import { mysqlOptions } from '../backend/config.mjs';
+import { schemaTables } from '../backend/mysql-schema.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 const names = ['admin_accounts', 'admin_articles'];

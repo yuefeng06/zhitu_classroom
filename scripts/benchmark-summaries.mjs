@@ -1,7 +1,7 @@
-import '../config.mjs';
+import '../backend/config.mjs';
 import mysql from 'mysql2/promise';
-import { mysqlOptions } from '../config.mjs';
-import { createCourseSummaries } from '../course-summary.mjs';
+import { mysqlOptions } from '../backend/config.mjs';
+import { createCourseSummaries } from '../backend/course-summary.mjs';
 import { writeFile, mkdir } from 'node:fs/promises';
 const connection = await mysql.createConnection(mysqlOptions());
 try {
@@ -11,8 +11,8 @@ try {
       'user_id BIGINT,course_id BIGINT,chapter_id BIGINT,percent INT,PRIMARY KEY(user_id,course_id)',
     course_visits:
       'user_id BIGINT,course_id BIGINT,chapter_id BIGINT,PRIMARY KEY(user_id,course_id)',
-    favorites: 'user_id BIGINT,course_id BIGINT,PRIMARY KEY(user_id,course_id)',
-    chapters: 'id BIGINT PRIMARY KEY,title VARCHAR(60)',
+    favorites: 'user_id BIGINT,chapter_id BIGINT,PRIMARY KEY(user_id,chapter_id)',
+    chapters: 'id BIGINT PRIMARY KEY,course_id BIGINT,title VARCHAR(60)',
   };
   for (const [name, ddl] of Object.entries(definitions))
     await connection.query(`CREATE TEMPORARY TABLE bench_${name} (${ddl})`);
@@ -42,11 +42,13 @@ try {
         );
         return {
           ...c,
-          favorite: !!(await db.get(
-            'SELECT 1 FROM favorites WHERE user_id=? AND course_id=?',
-            1,
-            c.id,
-          )),
+          favorite_chapter_count: (
+            await db.get(
+              'SELECT COUNT(*) AS count FROM favorites f JOIN chapters ch ON ch.id=f.chapter_id WHERE f.user_id=? AND ch.course_id=?',
+              1,
+              c.id,
+            )
+          ).count,
           progress: p?.percent || 0,
           chapter_id: v?.chapter_id || p?.chapter_id || null,
           last_opened_title: v?.title || null,
@@ -63,7 +65,7 @@ try {
     for (const name of Object.keys(definitions))
       await connection.query(`DELETE FROM bench_${name}`);
     for (let id = 1; id <= size; id++) {
-      await connection.query('INSERT INTO bench_chapters VALUES(?,?)', [id, 'fixture']);
+      await connection.query('INSERT INTO bench_chapters VALUES(?,?,?)', [id, id, 'fixture']);
       await connection.query('INSERT INTO bench_course_visits VALUES(1,?,?)', [id, id]);
       await connection.query('INSERT INTO bench_progress VALUES(1,?,?,25)', [id, id]);
     }

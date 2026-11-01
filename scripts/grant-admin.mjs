@@ -1,5 +1,5 @@
-import '../config.mjs';
-import { openDatabase } from '../database.mjs';
+import '../backend/config.mjs';
+import { openDatabase } from '../backend/database.mjs';
 const name = process.argv.find((s) => s.startsWith('--nickname='))?.slice(11);
 if (!name) throw Error('需要 --nickname=已注册昵称');
 const db = await openDatabase();

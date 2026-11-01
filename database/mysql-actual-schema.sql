@@ -1,4 +1,4 @@
--- 知途课堂 MySQL 实际结构，源库 zhitu_classroom，2026-10-14T10:52:05.133Z
+-- 知途课堂 MySQL 实际结构，源库 zhitu_classroom，2026-10-31T06:08:26.849Z
 -- 仅在已选中的新空库执行；不包含数据、DROP 或 USE。
 -- 自增计数起点已省略；视图使用 SQL SECURITY INVOKER，移除源库限定名。
 SET NAMES utf8mb4;
@@ -71,9 +71,10 @@ CREATE TABLE `comments` (
   `likes` int unsigned NOT NULL DEFAULT '0',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `hidden` bigint NOT NULL DEFAULT '0',
+  `chapter_id` bigint unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `fk_comment_course` (`course_id`),
-  KEY `fk_comment_user` (`user_id`)
+  KEY `fk_comment_user` (`user_id`),
+  KEY `idx_comments_chapter` (`course_id`,`chapter_id`,`hidden`,`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程评论表';
 
 CREATE TABLE `live_events` (
@@ -101,11 +102,11 @@ CREATE TABLE `notes` (
 
 CREATE TABLE `favorites` (
   `user_id` bigint unsigned NOT NULL,
-  `course_id` bigint unsigned NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`user_id`,`course_id`),
-  KEY `fk_favorite_course` (`course_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程收藏表';
+  `chapter_id` bigint unsigned NOT NULL,
+  PRIMARY KEY (`user_id`,`chapter_id`),
+  KEY `idx_favorites_chapter` (`chapter_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='章节视频收藏表';
 
 CREATE TABLE `progress` (
   `user_id` bigint unsigned NOT NULL,
@@ -159,9 +160,12 @@ CREATE TABLE `danmaku` (
   `color` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '#ffffff',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `chapter_id` bigint unsigned DEFAULT NULL,
+  `user_id` bigint unsigned DEFAULT NULL,
+  `hidden` bigint NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
-  KEY `fk_danmaku_course` (`course_id`),
-  KEY `fk_danmaku_chapter_id` (`chapter_id`)
+  KEY `fk_danmaku_chapter_id` (`chapter_id`),
+  KEY `idx_danmaku_user` (`user_id`),
+  KEY `idx_danmaku_review` (`course_id`,`chapter_id`,`hidden`,`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='视频弹幕表';
 
 CREATE TABLE `admin_accounts` (

@@ -1,7 +1,7 @@
 {
   "database_name": "zhitu_classroom",
   "version": "8.0.30",
-  "captured": "2026-10-14T10:52:05.133Z",
+  "captured": "2026-10-31T06:08:26.849Z",
   "tables": [
     {
       "TABLE_NAME": "admin_accounts",
@@ -64,7 +64,7 @@
       "TABLE_TYPE": "BASE TABLE",
       "ENGINE": "InnoDB",
       "TABLE_COLLATION": "utf8mb4_unicode_ci",
-      "TABLE_COMMENT": "课程收藏表"
+      "TABLE_COMMENT": "章节视频收藏表"
     },
     {
       "TABLE_NAME": "follows",
@@ -510,6 +510,20 @@
       "COLUMN_COMMENT": ""
     },
     {
+      "TABLE_NAME": "comments",
+      "COLUMN_NAME": "chapter_id",
+      "ORDINAL_POSITION": 8,
+      "COLUMN_TYPE": "bigint unsigned",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "EXTRA": "",
+      "COLUMN_KEY": "",
+      "CHARACTER_SET_NAME": null,
+      "COLLATION_NAME": null,
+      "COLUMN_COMMENT": ""
+    },
+    {
       "TABLE_NAME": "course_visits",
       "COLUMN_NAME": "user_id",
       "ORDINAL_POSITION": 1,
@@ -874,6 +888,34 @@
       "COLUMN_COMMENT": ""
     },
     {
+      "TABLE_NAME": "danmaku",
+      "COLUMN_NAME": "user_id",
+      "ORDINAL_POSITION": 8,
+      "COLUMN_TYPE": "bigint unsigned",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "YES",
+      "COLUMN_DEFAULT": null,
+      "EXTRA": "",
+      "COLUMN_KEY": "MUL",
+      "CHARACTER_SET_NAME": null,
+      "COLLATION_NAME": null,
+      "COLUMN_COMMENT": ""
+    },
+    {
+      "TABLE_NAME": "danmaku",
+      "COLUMN_NAME": "hidden",
+      "ORDINAL_POSITION": 9,
+      "COLUMN_TYPE": "bigint",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": "0",
+      "EXTRA": "",
+      "COLUMN_KEY": "",
+      "CHARACTER_SET_NAME": null,
+      "COLLATION_NAME": null,
+      "COLUMN_COMMENT": ""
+    },
+    {
       "TABLE_NAME": "favorites",
       "COLUMN_NAME": "user_id",
       "ORDINAL_POSITION": 1,
@@ -889,28 +931,28 @@
     },
     {
       "TABLE_NAME": "favorites",
-      "COLUMN_NAME": "course_id",
-      "ORDINAL_POSITION": 2,
-      "COLUMN_TYPE": "bigint unsigned",
-      "DATA_TYPE": "bigint",
-      "IS_NULLABLE": "NO",
-      "COLUMN_DEFAULT": null,
-      "EXTRA": "",
-      "COLUMN_KEY": "PRI",
-      "CHARACTER_SET_NAME": null,
-      "COLLATION_NAME": null,
-      "COLUMN_COMMENT": ""
-    },
-    {
-      "TABLE_NAME": "favorites",
       "COLUMN_NAME": "created_at",
-      "ORDINAL_POSITION": 3,
+      "ORDINAL_POSITION": 2,
       "COLUMN_TYPE": "datetime",
       "DATA_TYPE": "datetime",
       "IS_NULLABLE": "NO",
       "COLUMN_DEFAULT": "CURRENT_TIMESTAMP",
       "EXTRA": "DEFAULT_GENERATED",
       "COLUMN_KEY": "",
+      "CHARACTER_SET_NAME": null,
+      "COLLATION_NAME": null,
+      "COLUMN_COMMENT": ""
+    },
+    {
+      "TABLE_NAME": "favorites",
+      "COLUMN_NAME": "chapter_id",
+      "ORDINAL_POSITION": 3,
+      "COLUMN_TYPE": "bigint unsigned",
+      "DATA_TYPE": "bigint",
+      "IS_NULLABLE": "NO",
+      "COLUMN_DEFAULT": null,
+      "EXTRA": "",
+      "COLUMN_KEY": "PRI",
       "CHARACTER_SET_NAME": null,
       "COLLATION_NAME": null,
       "COLUMN_COMMENT": ""
@@ -1509,7 +1551,16 @@
     },
     {
       "TABLE_NAME": "comments",
-      "INDEX_NAME": "fk_comment_course",
+      "INDEX_NAME": "fk_comment_user",
+      "NON_UNIQUE": 1,
+      "SEQ_IN_INDEX": 1,
+      "COLUMN_NAME": "user_id",
+      "SUB_PART": null,
+      "INDEX_TYPE": "BTREE"
+    },
+    {
+      "TABLE_NAME": "comments",
+      "INDEX_NAME": "idx_comments_chapter",
       "NON_UNIQUE": 1,
       "SEQ_IN_INDEX": 1,
       "COLUMN_NAME": "course_id",
@@ -1518,10 +1569,28 @@
     },
     {
       "TABLE_NAME": "comments",
-      "INDEX_NAME": "fk_comment_user",
+      "INDEX_NAME": "idx_comments_chapter",
       "NON_UNIQUE": 1,
-      "SEQ_IN_INDEX": 1,
-      "COLUMN_NAME": "user_id",
+      "SEQ_IN_INDEX": 2,
+      "COLUMN_NAME": "chapter_id",
+      "SUB_PART": null,
+      "INDEX_TYPE": "BTREE"
+    },
+    {
+      "TABLE_NAME": "comments",
+      "INDEX_NAME": "idx_comments_chapter",
+      "NON_UNIQUE": 1,
+      "SEQ_IN_INDEX": 3,
+      "COLUMN_NAME": "hidden",
+      "SUB_PART": null,
+      "INDEX_TYPE": "BTREE"
+    },
+    {
+      "TABLE_NAME": "comments",
+      "INDEX_NAME": "idx_comments_chapter",
+      "NON_UNIQUE": 1,
+      "SEQ_IN_INDEX": 4,
+      "COLUMN_NAME": "id",
       "SUB_PART": null,
       "INDEX_TYPE": "BTREE"
     },
@@ -1617,10 +1686,46 @@
     },
     {
       "TABLE_NAME": "danmaku",
-      "INDEX_NAME": "fk_danmaku_course",
+      "INDEX_NAME": "idx_danmaku_review",
       "NON_UNIQUE": 1,
       "SEQ_IN_INDEX": 1,
       "COLUMN_NAME": "course_id",
+      "SUB_PART": null,
+      "INDEX_TYPE": "BTREE"
+    },
+    {
+      "TABLE_NAME": "danmaku",
+      "INDEX_NAME": "idx_danmaku_review",
+      "NON_UNIQUE": 1,
+      "SEQ_IN_INDEX": 2,
+      "COLUMN_NAME": "chapter_id",
+      "SUB_PART": null,
+      "INDEX_TYPE": "BTREE"
+    },
+    {
+      "TABLE_NAME": "danmaku",
+      "INDEX_NAME": "idx_danmaku_review",
+      "NON_UNIQUE": 1,
+      "SEQ_IN_INDEX": 3,
+      "COLUMN_NAME": "hidden",
+      "SUB_PART": null,
+      "INDEX_TYPE": "BTREE"
+    },
+    {
+      "TABLE_NAME": "danmaku",
+      "INDEX_NAME": "idx_danmaku_review",
+      "NON_UNIQUE": 1,
+      "SEQ_IN_INDEX": 4,
+      "COLUMN_NAME": "id",
+      "SUB_PART": null,
+      "INDEX_TYPE": "BTREE"
+    },
+    {
+      "TABLE_NAME": "danmaku",
+      "INDEX_NAME": "idx_danmaku_user",
+      "NON_UNIQUE": 1,
+      "SEQ_IN_INDEX": 1,
+      "COLUMN_NAME": "user_id",
       "SUB_PART": null,
       "INDEX_TYPE": "BTREE"
     },
@@ -1635,10 +1740,10 @@
     },
     {
       "TABLE_NAME": "favorites",
-      "INDEX_NAME": "fk_favorite_course",
+      "INDEX_NAME": "idx_favorites_chapter",
       "NON_UNIQUE": 1,
       "SEQ_IN_INDEX": 1,
-      "COLUMN_NAME": "course_id",
+      "COLUMN_NAME": "chapter_id",
       "SUB_PART": null,
       "INDEX_TYPE": "BTREE"
     },
@@ -1656,7 +1761,7 @@
       "INDEX_NAME": "PRIMARY",
       "NON_UNIQUE": 0,
       "SEQ_IN_INDEX": 2,
-      "COLUMN_NAME": "course_id",
+      "COLUMN_NAME": "chapter_id",
       "SUB_PART": null,
       "INDEX_TYPE": "BTREE"
     },
